@@ -72,7 +72,7 @@ func init() {
 			if t.Minute()%30 >= 3 {
 				return Condition{}
 			}
-			return Condition{InetLossPct: 25, InetRTTms: 170, JitterMs: 35}
+			return Condition{InetLossPct: 25, InetRTTms: 170, JitterMs: 35, IPv4Only: true}
 		},
 		Extra: func(g *Gen) {
 			g.Sink.Emit(record.Info(record.CUPnP, record.NTunnel, "", g.Start, map[string]string{"kind": "dslite", "evidence": "router has no public IPv4 address"}))

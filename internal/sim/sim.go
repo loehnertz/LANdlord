@@ -22,6 +22,7 @@ type Condition struct {
 	RSSI, RxMbps, RetryPct       float64
 	RouterRxBps, LaptopRxBps     float64
 	ConfiguredDNSFail, Roam      bool
+	IPv4Only                     bool // internet degradation applies to IPv4 targets only
 	FritzCRC                     float64
 }
 
@@ -92,6 +93,10 @@ func Run(sc Scenario, start time.Time, loc *time.Location, seed int64, sink reco
 			g.echo(record.InetTarget(a), a, t, c.InetRTTms, c.InetLossPct, c.JitterMs)
 		}
 		for _, a := range inet6 {
+			if c.IPv4Only {
+				g.echo(record.InetTarget(a), a, t, 22, 0, 2)
+				continue
+			}
 			g.echo(record.InetTarget(a), a, t, c.InetRTTms, c.Inet6LossPct, c.JitterMs)
 		}
 		g.Sink.Emit(record.Record{Time: t, Collector: record.CWifi, Kind: record.KindMetric, Name: record.NLink,
