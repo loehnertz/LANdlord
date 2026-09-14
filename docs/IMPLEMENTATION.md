@@ -36,6 +36,7 @@
 - Sleep detection compares wall-clock time between 5 s ticks (a gap over 30 s is a sleep) instead of subscribing to power notifications. It needs no Windows API and catches lid-close suspends as well.
 - Router identification drops the MAC vendor table (see the updated DESIGN.md): TR-064 and UPnP descriptions are authoritative.
 - DOCSIS levels for cable FRITZ!Boxes moved to "Later" in DESIGN.md.
+- Platform packages are `internal/platform/winplat` and `internal/platform/unixplat`, and the constructor for the current OS is `host.New()` in `internal/platform/host`. A `platform.Current()` inside `internal/platform` would create an import cycle, because the implementations import the interface package.
 
 ## Prerequisites
 

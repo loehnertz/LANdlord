@@ -70,6 +70,8 @@
       var d = new Date(ts * 1000);
       return new Date(d.getTime() + d.getTimezoneOffset() * 60000);
     }
+    var timeFmt = uPlot.fmtDate("{HH}:{mm}");
+    var dayFmt = uPlot.fmtDate("{WWW} {D} {MMM}");
     function fmt(v, unit) {
       if (v == null) return "-";
       var digits = Math.abs(v) < 10 ? 1 : 0;
@@ -178,7 +180,13 @@
             })
           ),
           axes: [
-            { stroke: muted, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid, width: 1 } },
+            { stroke: muted, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid, width: 1 }, space: 70,
+              values: function (u, splits) {
+                return splits.map(function (v) {
+                  var d = tzDate(v);
+                  return d.getHours() === 0 && d.getMinutes() === 0 ? dayFmt(d) : timeFmt(d);
+                });
+              } },
             { stroke: muted, grid: { stroke: grid, width: 1 }, ticks: { show: false }, size: 64,
               values: function (u, vals) { return vals.map(function (v) { return v + " " + def.unit; }); } }
           ],
