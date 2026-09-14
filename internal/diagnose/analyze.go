@@ -40,5 +40,6 @@ func Analyze(s *aggregate.Session, th config.Thresholds) Result {
 	}
 	r.Findings = findings(s, c, &r)
 	r.Recommendations = recommend(&r)
+	r.Live = liveVerdict(s, &r, th)
 	return r
 }

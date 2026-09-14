@@ -118,4 +118,5 @@ type Result struct {
 	BloatGrade, Country      string
 	Findings                 []Finding
 	Recommendations          []Recommendation
+	Live                     LiveVerdict
 }
