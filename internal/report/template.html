@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LANdlord inspection report</title>
+<style>{{.UPlotCSS}}</style>
+<style>{{.StyleCSS}}</style>
+</head>
+<body{{if .Redacted}} class="redacted-file"{{end}}>
+<div class="page">
+
+<header class="masthead">
+  <div>
+    <p class="eyebrow">LANdlord inspection report</p>
+    <h1>{{if .HasCause}}{{.MainTitle}}{{else if .Partial}}Recording in progress{{else}}No problems measured{{end}}</h1>
+    <p class="meta">{{.Period}} &middot; {{.Recorded}} recorded &middot; generated {{.Generated}}</p>
+  </div>
+  <div class="actions no-print">
+    {{if not .Redacted}}<button type="button" id="toggle-redact" aria-pressed="false">Hide private details</button>{{end}}
+    <button type="button" id="export-csv">Export data (CSV)</button>
+  </div>
+</header>
+
+{{if .Partial}}
+<section class="banner" role="status">
+  <strong>Recording still in progress.</strong> This is a snapshot; the final report may reach a different conclusion.
+  <p>{{.Live.Headline}}</p>
+  {{if .Live.Caveats}}<ul>{{range .Live.Caveats}}<li>{{.}}</li>{{end}}</ul>{{end}}
+</section>
+{{end}}
+
+<section class="verdict card" aria-labelledby="verdict-title">
+  <h2 id="verdict-title" class="visually-hidden">Verdict</h2>
+  {{if .HasCause}}
+    <div class="verdict-head">
+      <span class="swatch slot-{{.MainSlot}}" aria-hidden="true"></span>
+      <div>
+        <p class="verdict-title">Main culprit: <strong>{{.MainTitle}}</strong> <span class="pill">{{.MainConfidence}} confidence</span></p>
+        <p>{{.MainSentence}}</p>
+      </div>
+    </div>
+    <dl class="stats">
+      <div><dt>Time with problems</dt><dd>{{.ProblemPct}}</dd></div>
+      <div><dt>Problems found</dt><dd>{{len .Incidents}}{{if .IncidentsHidden}}+{{end}}</dd></div>
+      <div><dt>Your marks during problems</dt><dd>{{.MarksMatched}} of {{len .Marks}}</dd></div>
+    </dl>
+  {{else}}
+    <p class="verdict-title">The connection behaved well while LANdlord was recording.</p>
+    {{if .Marks}}<p>You marked {{len .Marks}} moments, but none of them lined up with a measurable problem. The trouble may come from the app or service itself, or from something LANdlord can't see.</p>{{end}}
+  {{end}}
+</section>
+
+{{if .Marks}}
+<section class="card" aria-labelledby="marks-title">
+  <h2 id="marks-title">Your marks</h2>
+  <table class="table">
+    <thead><tr><th scope="col">When</th><th scope="col">What you were doing</th><th scope="col">What LANdlord measured</th></tr></thead>
+    <tbody>
+    {{range .Marks}}<tr><td class="num">{{.Time}}</td><td>{{if .Tag}}{{.Tag}}{{else}}-{{end}}</td><td>{{.Outcome}}</td></tr>{{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
+
+{{if .Shares}}
+<section class="card" aria-labelledby="shares-title">
+  <h2 id="shares-title">Who's responsible</h2>
+  <p class="hint">Share of all problem time, by cause.</p>
+  <ul class="bars">
+    {{range .Shares}}
+    <li>
+      <span class="bar-label">{{.Title}}</span>
+      <span class="bar-track"><span class="bar-fill" style="width: {{printf "%.1f" .Pct}}%"></span></span>
+      <span class="bar-value">{{.Label}}</span>
+    </li>
+    {{end}}
+  </ul>
+</section>
+{{end}}
+
+{{if or .Tenant .Landlord}}
+<section class="card" aria-labelledby="repairs-title">
+  <h2 id="repairs-title">Repair requests</h2>
+  <div class="columns">
+    <div>
+      <h3>The tenant can fix this</h3>
+      {{if .Tenant}}<ul class="checklist">{{range .Tenant}}<li>{{.}}</li>{{end}}</ul>{{else}}<p class="hint">Nothing to do here.</p>{{end}}
+    </div>
+    <div>
+      <h3>Call the landlord</h3>
+      <p class="hint">Hardware, the provider, or someone technical.</p>
+      {{if .Landlord}}<ul class="checklist">{{range .Landlord}}<li>{{.}}</li>{{end}}</ul>{{else}}<p class="hint">Nothing to do here.</p>{{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+<section class="card" id="timeline" aria-labelledby="timeline-title">
+  <h2 id="timeline-title">Timeline</h2>
+  <p class="hint no-print">Drag across a chart to zoom in, double-click to zoom out. Hover to read exact values. Dashed lines are your marks; small ticks at the top are events such as Wi-Fi disconnects or speed tests.</p>
+  {{if .Culprits}}
+  <ul class="legend" aria-label="Problem shading">
+    {{range .Culprits}}<li><span class="swatch slot-{{.Slot}}" aria-hidden="true"></span>{{.Title}}</li>{{end}}
+  </ul>
+  {{end}}
+  <p id="charts-error" class="hint" hidden>The charts need a current browser with JavaScript enabled. The tables in this report contain the same findings.</p>
+  <div id="charts">
+    <figure><figcaption>Latency (95th percentile)</figcaption><div class="chart" id="chart-latency"></div></figure>
+    <figure><figcaption>Packet loss</figcaption><div class="chart" id="chart-loss"></div></figure>
+    <figure><figcaption>Jitter</figcaption><div class="chart" id="chart-jitter"></div></figure>
+    <figure><figcaption>Wi-Fi signal strength</figcaption><div class="chart" id="chart-rssi"></div></figure>
+    <figure><figcaption>Wi-Fi link speed</figcaption><div class="chart" id="chart-rx"></div></figure>
+    <figure><figcaption>Router's internet line in use</figcaption><div class="chart" id="chart-router"></div></figure>
+    <figure><figcaption>DNS lookup time</figcaption><div class="chart" id="chart-dns"></div></figure>
+  </div>
+</section>
+
+{{if .Heat}}
+<section class="card" aria-labelledby="heat-title">
+  <h2 id="heat-title">Problems by hour</h2>
+  <p class="hint">Share of each hour with problems. Empty cells weren't recorded.</p>
+  <div class="scroll">
+    <table class="heat">
+      <thead><tr><th scope="col"><span class="visually-hidden">Day</span></th>{{range .Hours}}<th scope="col">{{.}}</th>{{end}}</tr></thead>
+      <tbody>
+      {{range .Heat}}<tr><th scope="row">{{.Day}}</th>{{range .Cells}}<td class="{{if .Empty}}heat-empty{{else}}heat-{{.Level}}{{end}}" title="{{.Title}}"><span class="visually-hidden">{{.Title}}</span></td>{{end}}</tr>{{end}}
+      </tbody>
+    </table>
+  </div>
+  <ul class="legend heat-legend" aria-label="Heatmap scale">
+    <li><span class="swatch heat-0"></span>none</li><li><span class="swatch heat-2"></span>up to 5%</li><li><span class="swatch heat-4"></span>up to 25%</li><li><span class="swatch heat-6"></span>over 50%</li>
+  </ul>
+</section>
+{{end}}
+
+{{if .Incidents}}
+<section class="card" aria-labelledby="incidents-title">
+  <h2 id="incidents-title">Problems</h2>
+  <p class="hint">Newest first. Select a time to zoom the timeline to it.{{if .IncidentsHidden}} {{.IncidentsHidden}} older problems are only shown in the charts and the CSV export.{{end}}</p>
+  <div class="scroll">
+    <table class="table incidents">
+      <thead><tr><th scope="col">Start</th><th scope="col">Duration</th><th scope="col">Cause</th><th scope="col">Evidence</th></tr></thead>
+      <tbody>
+      {{range .Incidents}}
+      <tr>
+        <td class="num"><button type="button" class="link" data-zoom="{{.Zoom}}">{{.Start}}</button></td>
+        <td class="num">{{.Duration}}</td>
+        <td><span class="swatch slot-{{.Slot}}" aria-hidden="true"></span>{{.Title}}<br><span class="hint">{{.Confidence}} confidence{{if .RunnersUp}}; also: {{.RunnersUp}}{{end}}</span></td>
+        <td><ul class="evidence">{{range .Evidence}}<li>{{.}}</li>{{end}}{{range .Symptoms}}<li class="symptom">{{.}}</li>{{end}}</ul></td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{end}}
+
+<section class="card" aria-labelledby="details-title">
+  <h2 id="details-title">Inspection details</h2>
+
+  {{if .Findings}}
+  <h3>Findings</h3>
+  <dl class="findings">{{range .Findings}}<div><dt>{{.Title}}</dt><dd>{{.Detail}}</dd></div>{{end}}</dl>
+  {{end}}
+
+  {{if .Speed}}
+  <h3>Speed tests{{if .BloatGrade}} <span class="pill">bufferbloat grade {{.BloatGrade}}</span>{{end}}</h3>
+  <div class="scroll">
+    <table class="table">
+      <thead><tr><th scope="col">When</th><th scope="col" class="num">Download (Mbit/s)</th><th scope="col" class="num">Upload (Mbit/s)</th><th scope="col" class="num">Extra latency under load (ms)</th><th scope="col">Trigger</th></tr></thead>
+      <tbody>{{range .Speed}}<tr><td class="num">{{.Time}}</td><td class="num">{{.Down}}</td><td class="num">{{.Up}}</td><td class="num">{{.Bloat}}</td><td>{{.Trigger}}</td></tr>{{end}}</tbody>
+    </table>
+  </div>
+  {{end}}
+
+  {{if .Networks}}
+  <h3>Wi-Fi networks nearby</h3>
+  <div class="scroll">
+    <table class="table">
+      <thead><tr><th scope="col">Network</th><th scope="col">Access point</th><th scope="col" class="num">Signal (dBm)</th><th scope="col" class="num">Channel</th><th scope="col">Band</th><th scope="col" class="num">Width (MHz)</th></tr></thead>
+      <tbody>{{range .Networks}}<tr{{if .Connected}} class="current"{{end}}><td class="pii">{{.SSID}}{{if .Connected}} (connected){{end}}</td><td class="pii num">{{.BSSID}}</td><td class="num">{{.RSSI}}</td><td class="num">{{.Channel}}</td><td>{{.Band}}</td><td class="num">{{.WidthMHz}}</td></tr>{{end}}</tbody>
+    </table>
+  </div>
+  {{end}}
+
+  <div class="columns">
+    {{if .Router}}<div><h3>Router</h3><dl class="kv">{{range .Router}}<div><dt>{{.Key}}</dt><dd{{if .PII}} class="pii"{{end}}>{{.Value}}</dd></div>{{end}}</dl></div>{{end}}
+    {{if .Connection}}<div><h3>Connection</h3><dl class="kv">{{range .Connection}}<div><dt>{{.Key}}</dt><dd{{if .PII}} class="pii"{{end}}>{{.Value}}</dd></div>{{end}}</dl></div>{{end}}
+  </div>
+
+  {{if .DNS}}
+  <h3>DNS servers</h3>
+  <div class="scroll">
+    <table class="table">
+      <thead><tr><th scope="col">Server</th><th scope="col" class="num">Average</th><th scope="col" class="num">Lookups</th><th scope="col" class="num">Failures</th></tr></thead>
+      <tbody>{{range .DNS}}<tr><td>{{.Label}}</td><td class="num">{{.Mean}}</td><td class="num">{{.Lookups}}</td><td class="num">{{.Failures}}</td></tr>{{end}}</tbody>
+    </table>
+  </div>
+  {{end}}
+
+  {{if .DeviceLog}}
+  <details><summary>Router event log</summary><pre class="log pii">{{.DeviceLog}}</pre></details>
+  {{end}}
+</section>
+
+<section class="card" aria-labelledby="appendix-title">
+  <h2 id="appendix-title">Appendix</h2>
+  <div class="columns">
+    {{if .Laptop}}<div><h3>This computer</h3><dl class="kv">{{range .Laptop}}<div><dt>{{.Key}}</dt><dd{{if .PII}} class="pii"{{end}}>{{.Value}}</dd></div>{{end}}</dl></div>{{end}}
+    <div>
+      <h3>Not measured</h3>
+      {{if .Unavailable}}<dl class="kv">{{range .Unavailable}}<div><dt>{{.Title}}</dt><dd>{{.Detail}}</dd></div>{{end}}</dl>{{else}}<p class="hint">Every measurement ran.</p>{{end}}
+    </div>
+  </div>
+  {{if .Settings}}
+  <h3>Thresholds used</h3>
+  <dl class="kv">{{range .Settings}}<div><dt>{{.Key}}</dt><dd>{{.Value}}</dd></div>{{end}}</dl>
+  {{end}}
+  {{if .WlanReport}}
+  <details><summary>Windows Wi-Fi report (last 3 days)</summary><iframe class="wlanreport pii" sandbox title="Windows Wi-Fi report" srcdoc="{{.WlanReport}}"></iframe></details>
+  {{end}}
+</section>
+
+<footer class="footer">
+  Made with LANdlord {{.Version}}{{if .Redacted}} &middot; private details were removed from this file{{end}}.
+</footer>
+</div>
+
+<script type="application/octet-stream" id="landlord-data">{{.Data}}</script>
+<script type="application/octet-stream" id="landlord-csv">{{.CSV}}</script>
+<script>{{.UPlotJS}}</script>
+<script>{{.AppJS}}</script>
+</body>
+</html>

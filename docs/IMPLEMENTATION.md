@@ -15,7 +15,7 @@
 ## Global constraints
 
 - Module path: `github.com/loehnertz/LANdlord`.
-- `go.mod` declares `go 1.25`. No cgo anywhere (`CGO_ENABLED=0` must build every target).
+- `go.mod` declares `go 1.26` (raised from 1.25 because `golang.org/x/net` requires it). No cgo anywhere (`CGO_ENABLED=0` must build every target).
 - Git branch is `master`. Commit after every task with a message in the form `<area>: <what>`, ending with the line `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
 - Everything user-facing is in English.
 - LANdlord never changes system settings. It only reads.

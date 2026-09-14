@@ -16,7 +16,7 @@ make windows                  # cross-compile bin/landlord.exe from macOS or Lin
 go run ./cmd/landlord simulate -scenario weak_wifi -out testdata/out   # fake session + report on any OS
 ```
 
-Requires Go 1.25 or newer.
+Requires Go 1.26 or newer.
 
 ## Layout
 
