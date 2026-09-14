@@ -4,7 +4,6 @@
 package winplat
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,7 +61,3 @@ func hiddenCommand(name string, args ...string) *exec.Cmd {
 }
 
 var _ = hiddenCommand
-
-// The methods below are filled in by later tasks.
-
-func (*Platform) KeepAwake(context.Context) error { return platform.ErrUnsupported }
