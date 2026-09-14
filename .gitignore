@@ -1,0 +1,6 @@
+/dist/
+/bin/
+*.exe
+*.syso
+/testdata/out/
+.DS_Store
