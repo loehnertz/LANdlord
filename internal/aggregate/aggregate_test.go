@@ -165,6 +165,20 @@ func TestCarryForwardSleepEventsInfos(t *testing.T) {
 	}
 }
 
+func TestRouterSamplesHeldForSixtySeconds(t *testing.T) {
+	meta := store.Meta{Start: t0, Duration: time.Hour, Finished: true, FinishedAt: t0.Add(2 * time.Minute)}
+	recs := []record.Record{
+		record.Metric(record.CUPnP, record.NWAN, "", t0, map[string]float64{"rx_bps": 40e6, "tx_bps": 1e6, "link_down_bps": 50e6, "link_up_bps": 10e6}),
+	}
+	s := build(t, meta, recs)
+	if !s.Buckets[6].Router.Present || s.Buckets[6].Router.RxBps != 40e6 || s.Buckets[6].Router.LinkDownBps != 50e6 {
+		t.Fatalf("bucket 6 (60 s) should hold the router sample: %+v", s.Buckets[6].Router)
+	}
+	if s.Buckets[7].Router.Present {
+		t.Fatalf("bucket 7 (70 s) should no longer hold the router sample: %+v", s.Buckets[7].Router)
+	}
+}
+
 func TestBuilderSnapshotsAreIndependent(t *testing.T) {
 	meta := store.Meta{Start: t0, Duration: time.Hour}
 	b := NewBuilder(meta, DefaultWidth)

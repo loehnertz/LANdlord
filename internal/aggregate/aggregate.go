@@ -429,11 +429,18 @@ func finalize(b *Bucket, a *accum) {
 	}
 }
 
-// carryForward fills slow-changing values (scan results, WAN link rates, power) into later buckets.
+// routerHold is how long a router sample stays valid for buckets without their own sample.
+// UPnP is polled every 30 s, so without it two out of three buckets would lack router data.
+const routerHold = 60 * time.Second
+
+// carryForward fills slow-changing values (scan results, router stats, power) into later buckets.
 func (s *Session) carryForward() {
 	var overlap int
 	var scanKnown, powerKnown, onBattery bool
 	var linkDown, linkUp float64
+	var lastRouter RouterStats
+	lastRouterIdx := -1
+	hold := int(routerHold / s.Width)
 	for i := range s.Buckets {
 		b := &s.Buckets[i]
 		if b.Wifi.ScanKnown {
@@ -446,10 +453,15 @@ func (s *Session) carryForward() {
 		} else if powerKnown {
 			b.PowerKnown, b.OnBattery = true, onBattery
 		}
-		if b.Router.LinkDownBps > 0 {
-			linkDown, linkUp = b.Router.LinkDownBps, b.Router.LinkUpBps
-		} else if b.Router.Present {
-			b.Router.LinkDownBps, b.Router.LinkUpBps = linkDown, linkUp
+		if b.Router.Present {
+			if b.Router.LinkDownBps > 0 {
+				linkDown, linkUp = b.Router.LinkDownBps, b.Router.LinkUpBps
+			} else {
+				b.Router.LinkDownBps, b.Router.LinkUpBps = linkDown, linkUp
+			}
+			lastRouter, lastRouterIdx = b.Router, i
+		} else if lastRouterIdx >= 0 && i-lastRouterIdx <= hold {
+			b.Router = lastRouter
 		}
 	}
 }
