@@ -3,6 +3,8 @@ module github.com/loehnertz/LANdlord
 go 1.26.0
 
 require (
+	fyne.io/systray v1.12.2 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/miekg/dns v1.1.73 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect

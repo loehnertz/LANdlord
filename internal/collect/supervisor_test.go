@@ -67,6 +67,14 @@ func TestSupervisor(t *testing.T) {
 	waitFor(t, func() bool { st := stateOf(sup, "panicky"); return st.Status == StatusRunning && st.Restarts == 2 })
 	waitFor(t, func() bool { return stateOf(sup, "flaky").Restarts >= 3 })
 
+	if !sup.Launch(funcCollector{"late", func(ctx context.Context, sink record.Sink) error { <-ctx.Done(); return nil }}) {
+		t.Fatal("Launch during Run should succeed")
+	}
+	waitFor(t, func() bool { return stateOf(sup, "late").Status == StatusRunning })
+	if sup.Launch(funcCollector{"late", func(context.Context, record.Sink) error { return nil }}) {
+		t.Fatal("launching the same collector twice should be refused")
+	}
+
 	unavailable := buf.Filter("permanent", "")
 	if len(unavailable) != 1 || unavailable[0].Kind != record.KindUnavailable || unavailable[0].Attrs["reason"] != "no Wi-Fi adapter" {
 		t.Fatalf("unavailable records = %+v", unavailable)

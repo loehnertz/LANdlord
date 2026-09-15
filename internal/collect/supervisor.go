@@ -43,6 +43,9 @@ type Supervisor struct {
 	mu         sync.Mutex
 	collectors []Collector
 	states     map[string]*State
+	ctx        context.Context
+	stopped    bool
+	wg         sync.WaitGroup
 }
 
 func NewSupervisor(sink record.Sink, now func() time.Time) *Supervisor {
@@ -69,13 +72,34 @@ func (s *Supervisor) Add(c Collector) {
 // Run starts every collector and blocks until ctx is done and all of them have returned.
 func (s *Supervisor) Run(ctx context.Context) {
 	s.mu.Lock()
-	collectors := slices.Clone(s.collectors)
-	s.mu.Unlock()
-	var wg sync.WaitGroup
-	for _, c := range collectors {
-		wg.Go(func() { s.loop(ctx, c) })
+	s.ctx = ctx
+	for _, c := range s.collectors {
+		s.wg.Go(func() { s.loop(ctx, c) })
 	}
-	wg.Wait()
+	s.mu.Unlock()
+	<-ctx.Done()
+	s.mu.Lock()
+	s.stopped = true
+	s.mu.Unlock()
+	s.wg.Wait()
+}
+
+// Launch starts a collector while Run is already running, for collectors that depend on
+// something discovered during the recording. It does nothing before Run or after it stopped.
+func (s *Supervisor) Launch(c Collector) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.ctx == nil || s.stopped || s.ctx.Err() != nil {
+		return false
+	}
+	if _, exists := s.states[c.Name()]; exists {
+		return false
+	}
+	s.collectors = append(s.collectors, c)
+	s.states[c.Name()] = &State{Name: c.Name(), Status: StatusStopped}
+	ctx := s.ctx
+	s.wg.Go(func() { s.loop(ctx, c) })
+	return true
 }
 
 func (s *Supervisor) loop(ctx context.Context, c Collector) {
