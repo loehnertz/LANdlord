@@ -4,3 +4,17 @@
 *.syso
 /testdata/out/
 .DS_Store
+
+# From GitHub's Go template
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+go.work
+go.work.sum
+.env
