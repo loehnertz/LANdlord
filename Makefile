@@ -13,7 +13,7 @@ icon:
 	go run ./tools/genicon
 
 resources:
-	$(GOWINRES) make --in winres/winres.json --out cmd/landlord/rsrc
+	$(GOWINRES) make --in winres/winres.json --out cmd/landlord/rsrc --arch amd64,arm64
 
 windows: resources
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H=windowsgui" -o bin/landlord.exe ./cmd/landlord

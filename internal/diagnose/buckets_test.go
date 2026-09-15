@@ -22,7 +22,7 @@ func TestSymptoms(t *testing.T) {
 		{"stun loss", func(b *aggregate.Bucket) { b.STUN.Recv = 470; b.STUN.LossPct = 6 }, []string{"udp_loss"}},
 		{"dns failure", func(b *aggregate.Bucket) { b.DNS[record.TSystem].Failed = 1 }, []string{"dns_failure"}},
 		{"single configured dns server failing is not a symptom", func(b *aggregate.Bucket) { b.DNS["configured:192.168.178.1"].Failed = 3 }, nil},
-		{"http failure", func(b *aggregate.Bucket) { b.HTTP["zoom.us"].Failed = 1 }, []string{"http_failure"}},
+		{"http failure", func(b *aggregate.Bucket) { b.HTTP["zoom.us"].Count, b.HTTP["zoom.us"].Failed = 2, 1 }, []string{"http_failure"}},
 		{"wan reconnect", func(b *aggregate.Bucket) {
 			b.Events = append(b.Events, aggregate.Event{Collector: record.CUPnP, Name: record.NWANReconnect})
 		}, []string{"wan_reconnect"}},
