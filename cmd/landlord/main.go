@@ -20,6 +20,7 @@ const usage = `usage:
   landlord [run] [-config FILE] [-duration 48h] [-no-helper] [-no-browser] [-data-dir DIR] [-report-dir DIR]
   landlord simulate -scenario NAME [-out DIR] [-seed N]
   landlord report [-redact] [-out FILE] [-config FILE] SESSION_DIR
+  landlord inspect SESSION_DIR
   landlord version`
 
 func main() {
@@ -49,6 +50,11 @@ func run(args []string) error {
 		return simulate(args[1:])
 	case "report":
 		return rebuildReport(args[1:])
+	case "inspect":
+		if len(args) != 2 {
+			return errors.New(usage)
+		}
+		return app.Inspect(os.Stdout, args[1])
 	default:
 		if len(cmd) > 0 && cmd[0] == '-' {
 			return record(args)

@@ -40,6 +40,14 @@ func TestSimulateAndRebuildReport(t *testing.T) {
 	if strings.Contains(string(b), "203.0.113.7") {
 		t.Fatal("redacted report contains the public IP")
 	}
+
+	var out strings.Builder
+	if err := Inspect(&out, sessions[0]); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "ping/echo (metric)") || !strings.Contains(out.String(), "eventlog: simulated session") {
+		t.Fatalf("inspect output:\n%s", out.String())
+	}
 }
 
 func TestSimulateUnknownScenario(t *testing.T) {

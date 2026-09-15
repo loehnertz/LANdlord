@@ -152,7 +152,7 @@ func (c *Collector) pingWhile(ctx context.Context, targets []netip.Addr, work fu
 				reply, err := pg.Echo(pctx, platform.EchoRequest{Dst: t, Timeout: time.Second})
 				if err == nil && reply.Status == platform.EchoOK {
 					mu.Lock()
-					out[t] = append(out[t], float64(reply.RTT.Microseconds())/1000)
+					out[t] = append(out[t], float64(reply.RTT)/float64(time.Millisecond))
 					mu.Unlock()
 				}
 				select {

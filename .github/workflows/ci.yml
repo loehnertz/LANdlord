@@ -22,6 +22,26 @@ jobs:
       - name: Windows API tests (ICMP, routes, Wi-Fi when available)
         if: runner.os == 'Windows'
         run: go test -v -tags windowsapi ./internal/platform/winplat/
+      - name: Smoke run of the real app on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          go build -o landlord-smoke.exe ./cmd/landlord
+          $data = Join-Path $env:RUNNER_TEMP "ll-data"
+          $reports = Join-Path $env:RUNNER_TEMP "ll-report"
+          $proc = Start-Process -FilePath .\landlord-smoke.exe -ArgumentList @("-duration", "90s", "-no-browser", "-no-helper", "-data-dir", $data, "-report-dir", $reports) -PassThru
+          $deadline = (Get-Date).AddMinutes(5)
+          while (-not (Get-ChildItem -Recurse -Path $reports -Filter report.html -ErrorAction SilentlyContinue)) {
+            if ((Get-Date) -gt $deadline) { throw "no report after 5 minutes" }
+            if ($proc.HasExited) { throw "landlord exited early with code $($proc.ExitCode)" }
+            Start-Sleep -Seconds 5
+          }
+          Stop-Process -Id $proc.Id -Force
+          $session = Get-ChildItem -Directory -Path (Join-Path $data "sessions") | Select-Object -First 1
+          .\landlord-smoke.exe inspect $session.FullName
+          $report = Get-ChildItem -Recurse -Path $reports -Filter report.html | Select-Object -First 1
+          if ((Get-Item $report.FullName).Length -lt 100000) { throw "report is suspiciously small" }
+          Select-String -Path $report.FullName -Pattern "<h1>[^<]*</h1>" | ForEach-Object { $_.Matches.Value }
   lint:
     runs-on: ubuntu-latest
     steps:

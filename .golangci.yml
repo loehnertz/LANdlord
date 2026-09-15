@@ -9,6 +9,8 @@ linters:
     errcheck:
       # Closing files, connections and response bodies after use can't be handled meaningfully.
       exclude-functions:
+        - fmt.Fprintf
+        - fmt.Fprintln
         - (io.Closer).Close
         - (*os.File).Close
         - (net.Conn).Close
