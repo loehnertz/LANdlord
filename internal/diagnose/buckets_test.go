@@ -20,7 +20,8 @@ func TestSymptoms(t *testing.T) {
 		{"single lossy target ignored", func(b *aggregate.Bucket) { lossy(b.Paths["inet:9.9.9.9"], 40) }, nil},
 		{"stun jitter", func(b *aggregate.Bucket) { b.STUN.Jitter = 45 }, []string{"jitter"}},
 		{"stun loss", func(b *aggregate.Bucket) { b.STUN.Recv = 470; b.STUN.LossPct = 6 }, []string{"udp_loss"}},
-		{"dns failure", func(b *aggregate.Bucket) { b.DNS["configured:192.168.178.1"].Failed = 1 }, []string{"dns_failure"}},
+		{"dns failure", func(b *aggregate.Bucket) { b.DNS[record.TSystem].Failed = 1 }, []string{"dns_failure"}},
+		{"single configured dns server failing is not a symptom", func(b *aggregate.Bucket) { b.DNS["configured:192.168.178.1"].Failed = 3 }, nil},
 		{"http failure", func(b *aggregate.Bucket) { b.HTTP["zoom.us"].Failed = 1 }, []string{"http_failure"}},
 		{"wan reconnect", func(b *aggregate.Bucket) {
 			b.Events = append(b.Events, aggregate.Event{Collector: record.CUPnP, Name: record.NWANReconnect})
@@ -41,6 +42,26 @@ func TestSymptoms(t *testing.T) {
 				assertSignals(t, got, tt.want...)
 			}
 		})
+	}
+}
+
+func TestNeverWorkingTargetsAreIgnored(t *testing.T) {
+	s := newSession(20, func(_ int, b *aggregate.Bucket) {
+		// IPv6 is configured but broken, UDP to STUN is blocked and one service is blocked, all session long.
+		for label, p := range b.Paths {
+			if record.IsInet6Target(label) {
+				p.Recv, p.LossPct, p.P95 = 0, 100, 0
+			}
+		}
+		b.STUN = aggregate.PathStats{Sent: 500, LossPct: 100}
+		b.HTTP["www.netflix.com"] = &aggregate.HTTPStats{Count: 1, Failed: 1}
+	})
+	c := newCtx(s, th())
+	if got := c.symptoms(&s.Buckets[3]); len(got) != 0 {
+		t.Fatalf("never-working targets produced symptoms: %v", signals(got))
+	}
+	if in := c.internet(&s.Buckets[3], 0); in.Targets != 3 {
+		t.Fatalf("internet targets = %d, want 3 (dead IPv6 excluded)", in.Targets)
 	}
 }
 

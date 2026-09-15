@@ -80,8 +80,9 @@ func New(c Controller) (*Server, error) {
 
 func (s *Server) Token() string { return s.token }
 
-// URL is the address to open in the browser; the token travels in the fragment, which browsers never send.
-func (s *Server) URL() string { return fmt.Sprintf("http://127.0.0.1:%d/#%s", s.port, s.token) }
+// URL is the address to open in the browser. The token is a query parameter because Windows'
+// ShellExecute doesn't reliably keep URL fragments; the page removes it from the address bar.
+func (s *Server) URL() string { return fmt.Sprintf("http://127.0.0.1:%d/?t=%s", s.port, s.token) }
 
 // BaseURL is the address without the token, for health checks.
 func (s *Server) BaseURL() string { return fmt.Sprintf("http://127.0.0.1:%d", s.port) }

@@ -18,10 +18,15 @@ type sessionCtx struct {
 	hops     []string // responding hop labels, in order
 	tunnel   bool
 	hasIPv6  bool
+	// Targets and services that worked at least once. Ones that never did (blocked by a
+	// firewall, broken IPv6) are ignored, so they can't turn every bucket into a problem.
+	alive  map[string]bool
+	httpOK map[string]bool
+	stunOK bool
 }
 
 func newCtx(s *aggregate.Session, th config.Thresholds) *sessionCtx {
-	c := &sessionCtx{th: th}
+	c := &sessionCtx{th: th, alive: map[string]bool{}, httpOK: map[string]bool{}}
 	var gw, rx []float64
 	responding := map[string]bool{}
 	for i := range s.Buckets {
@@ -35,10 +40,19 @@ func newCtx(s *aggregate.Session, th config.Thresholds) *sessionCtx {
 		if b.Wifi.Connected && b.Wifi.RxMbps > 0 {
 			rx = append(rx, b.Wifi.RxMbps)
 		}
+		if b.STUN.Recv > 0 {
+			c.stunOK = true
+		}
+		for host, h := range b.HTTP {
+			if h.Count > h.Failed {
+				c.httpOK[host] = true
+			}
+		}
 		for label, p := range b.Paths {
 			if p.Recv == 0 {
 				continue
 			}
+			c.alive[label] = true
 			if strings.HasPrefix(label, "hop") {
 				responding[label] = true
 			}
@@ -97,7 +111,7 @@ func (c *sessionCtx) internet(b *aggregate.Bucket, family int) inetSummary {
 	var loss, p95, jitter []float64
 	for label, p := range b.Paths {
 		v4, v6 := record.IsInetTarget(label), record.IsInet6Target(label)
-		if !(v4 && family != 6 || v6 && family != 4) || p.Sent == 0 {
+		if !(v4 && family != 6 || v6 && family != 4) || p.Sent == 0 || !c.alive[label] {
 			continue
 		}
 		s.Targets++
@@ -128,17 +142,16 @@ func (c *sessionCtx) symptoms(b *aggregate.Bucket) []Evidence {
 	if j := max(in.Jitter, b.STUN.Jitter); j > th.JitterMs {
 		ev = append(ev, Evidence{"jitter", fmt.Sprintf("Jitter: %.0f ms", j)})
 	}
-	if b.STUN.Sent > 0 && b.STUN.LossPct > th.LossPct {
+	if c.stunOK && b.STUN.Sent > 0 && b.STUN.LossPct > th.LossPct {
 		ev = append(ev, Evidence{"udp_loss", fmt.Sprintf("Call-like UDP packet loss: %.1f%%", b.STUN.LossPct)})
 	}
-	for _, label := range sortedKeys(b.DNS) {
-		if b.DNS[label].Failed > 0 {
-			ev = append(ev, Evidence{"dns_failure", "DNS lookups failed via " + label})
-			break
-		}
+	// Only the Windows resolver counts as a symptom: it is what apps actually use. Failures of
+	// individual servers are evidence for the DNS rule, not problems on their own.
+	if d := b.DNS[record.TSystem]; d != nil && d.Failed > 0 {
+		ev = append(ev, Evidence{"dns_failure", "Name lookups failed"})
 	}
 	for _, host := range sortedKeys(b.HTTP) {
-		if b.HTTP[host].Failed > 0 {
+		if b.HTTP[host].Failed > 0 && c.httpOK[host] {
 			ev = append(ev, Evidence{"http_failure", "Connection to " + host + " failed"})
 			break
 		}

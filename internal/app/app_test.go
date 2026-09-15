@@ -135,8 +135,8 @@ func TestRunMarkFinish(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(html), "LANdlord inspection report") || len(fake.Revealed) != 1 {
-		t.Fatalf("report not written or revealed (revealed %v)", fake.Revealed)
+	if !strings.Contains(string(html), "LANdlord inspection report") || len(fake.Revealed) != 0 {
+		t.Fatalf("report not written, or revealed despite NoBrowser (revealed %v)", fake.Revealed)
 	}
 	sess, err := store.Latest(fake.Data)
 	if err != nil {

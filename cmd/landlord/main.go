@@ -17,7 +17,7 @@ import (
 )
 
 const usage = `usage:
-  landlord [run] [-config FILE] [-duration 48h] [-no-helper] [-no-browser] [-data-dir DIR]
+  landlord [run] [-config FILE] [-duration 48h] [-no-helper] [-no-browser] [-data-dir DIR] [-report-dir DIR]
   landlord simulate -scenario NAME [-out DIR] [-seed N]
   landlord report [-redact] [-out FILE] [-config FILE] SESSION_DIR
   landlord version`
@@ -77,8 +77,9 @@ func record(args []string) error {
 	configPath := fs.String("config", "", "landlord.toml (default: next to the executable)")
 	duration := fs.Duration("duration", 0, "how long to record (default 48h)")
 	noHelper := fs.Bool("no-helper", false, "don't ask for admin rights")
-	noBrowser := fs.Bool("no-browser", false, "don't open the status page")
+	noBrowser := fs.Bool("no-browser", false, "don't open the status page or the report folder")
 	dataDir := fs.String("data-dir", "", "where to keep measurement data")
+	reportDir := fs.String("report-dir", "", "where to write the report (default: Documents/LANdlord)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -91,7 +92,7 @@ func record(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	return app.Run(ctx, cfg, host.New(), app.RunOptions{NoHelper: *noHelper, NoBrowser: *noBrowser, DataDir: *dataDir})
+	return app.Run(ctx, cfg, host.New(), app.RunOptions{NoHelper: *noHelper, NoBrowser: *noBrowser, DataDir: *dataDir, ReportDir: *reportDir})
 }
 
 func helper(args []string) error {

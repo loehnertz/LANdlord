@@ -52,7 +52,11 @@ func (c *Collector) defaultResolvers() []resolver {
 	seen := map[string]bool{}
 	if route, err := c.p.DefaultRoute(); err == nil {
 		for _, a := range route.DNSServers {
-			addr := netip.AddrPortFrom(a, 53).String()
+			// Windows often lists unreachable default IPv6 servers (fec0::); IPv4 servers are the reliable signal.
+			if !a.Unmap().Is4() {
+				continue
+			}
+			addr := netip.AddrPortFrom(a.Unmap(), 53).String()
 			if seen[addr] {
 				continue
 			}

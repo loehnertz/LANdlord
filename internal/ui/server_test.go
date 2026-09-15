@@ -93,7 +93,7 @@ func TestSecurityChecks(t *testing.T) {
 	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "It's bad right now!") || page.Header().Get("X-Frame-Options") != "DENY" {
 		t.Fatalf("page: %d %v", page.Code, page.Header())
 	}
-	if !strings.HasSuffix(s.URL(), "/#"+s.Token()) {
+	if !strings.HasSuffix(s.URL(), "/?t="+s.Token()) {
 		t.Fatalf("URL = %s", s.URL())
 	}
 }

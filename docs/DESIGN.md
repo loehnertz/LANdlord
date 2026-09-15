@@ -108,7 +108,7 @@ Speed tests are skipped when the laptop itself sent or received more than 1 Mbit
 |---|---|
 | `netsh wlan show wlanreport` | Runs once; the generated HTML (last 3 days of Wi-Fi sessions and disconnect reasons) is embedded in the report inside a sandboxed iframe |
 | Full Event Log access | WLAN-AutoConfig, DHCP client and NCSI connectivity events for the last 7 days |
-| TCP/443 traceroute | Per-socket TTL on a normal TCP connect plus a raw ICMP listener for time-exceeded replies. Best effort: if it proves unreliable on Windows during implementation, it is dropped and the ICMP traceroute remains |
+| TCP/443 traceroute | Not in v1 (see "Later"); the ICMP traceroute covers the path |
 | Wi-Fi driver advanced properties | Roaming aggressiveness, power saving, preferred band, read from the adapter's registry key; read only |
 
 The helper is a second `landlord.exe --helper` process started with `ShellExecute` and the `runas` verb. It writes records into the same session directory through the store package, exits when the parent process exits, and never opens a browser. Keeping the browser and tray in the unelevated process avoids running a browser as admin.
@@ -350,6 +350,7 @@ LICENSE  README.md  CONTRIBUTING.md
 - Optional upload to a small self-hosted endpoint for live remote viewing.
 - Real Wi-Fi collectors for macOS and Linux.
 - Router plugins beyond FRITZ!Box.
+- TCP/443 traceroute from the elevated helper (per-socket TTL plus a raw ICMP listener).
 - DOCSIS signal levels for FRITZ!Box cable models (needs the web UI login flow and `data.lua`, not TR-064).
 - Code signing.
 

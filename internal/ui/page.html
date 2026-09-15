@@ -129,7 +129,7 @@ code { overflow-wrap: anywhere; }
 <script>
 (function () {
   "use strict";
-  var token = location.hash.slice(1);
+  var token = new URLSearchParams(location.search).get("t") || location.hash.slice(1);
   try {
     if (token) { sessionStorage.setItem("landlord-token", token); history.replaceState(null, "", "/"); }
     else { token = sessionStorage.getItem("landlord-token") || ""; }

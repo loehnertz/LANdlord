@@ -43,8 +43,11 @@ import (
 const collectingHeadline = "Still collecting data. Keep using the laptop normally and press the button when something goes wrong."
 
 type RunOptions struct {
+	// NoBrowser also suppresses revealing the finished report in Explorer/Finder.
 	NoHelper, NoBrowser, NoTray bool
 	DataDir                     string
+	// ReportDir overrides where reports go (default: Documents\LANdlord).
+	ReportDir string
 	// Collectors replaces the real collectors, for tests.
 	Collectors func(r *Recorder) []collect.Collector
 	// LingerAfterFinish keeps the status page reachable after the report is written.
@@ -443,19 +446,25 @@ func (r *Recorder) Finish() (string, error) {
 			return
 		}
 		meta := r.sess.Meta()
-		docs, err := r.plat.DocumentsDir()
-		if err != nil || docs == "" {
-			docs = r.dataDir
+		reportDir := r.opts.ReportDir
+		if reportDir == "" {
+			docs, err := r.plat.DocumentsDir()
+			if err != nil || docs == "" {
+				docs = r.dataDir
+			}
+			reportDir = filepath.Join(docs, "LANdlord")
 		}
 		name := meta.Start.In(meta.Location()).Format("2006-01-02_1504")
-		out := filepath.Join(docs, "LANdlord", name, "report.html")
+		out := filepath.Join(reportDir, name, "report.html")
 		if err := RebuildReport(r.sess.Dir(), out, false, r.cfg.Thresholds); err != nil {
 			r.finishErr = err
 			return
 		}
 		_ = r.sess.Update(func(m *store.Meta) { m.ReportPath = out })
 		r.reportPath = out
-		_ = r.plat.RevealFile(out)
+		if !r.opts.NoBrowser {
+			_ = r.plat.RevealFile(out)
+		}
 	})
 	return r.reportPath, r.finishErr
 }

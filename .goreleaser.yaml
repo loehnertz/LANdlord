@@ -1,0 +1,52 @@
+version: 2
+project_name: landlord
+
+before:
+  hooks:
+    - go mod tidy
+    - go run github.com/tc-hib/go-winres@v0.3.3 make --in winres/winres.json --out cmd/landlord/rsrc --product-version={{ .Version }} --file-version={{ .Version }}
+
+builds:
+  - id: windows
+    main: ./cmd/landlord
+    binary: landlord
+    env: [CGO_ENABLED=0]
+    goos: [windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -H=windowsgui
+      - -X github.com/loehnertz/LANdlord/internal/version.Version={{ .Version }}
+      - -X github.com/loehnertz/LANdlord/internal/version.Commit={{ .ShortCommit }}
+  - id: unix
+    main: ./cmd/landlord
+    binary: landlord
+    env: [CGO_ENABLED=0]
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/loehnertz/LANdlord/internal/version.Version={{ .Version }}
+      - -X github.com/loehnertz/LANdlord/internal/version.Commit={{ .ShortCommit }}
+
+archives:
+  - id: windows
+    ids: [windows]
+    formats: [zip]
+    name_template: "landlord_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files: [README.md, LICENSE, docs/USER-GUIDE.md]
+  - id: unix
+    ids: [unix]
+    formats: [tar.gz]
+    name_template: "landlord_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files: [README.md, LICENSE]
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  footer: |
+    **Windows:** download `landlord_{{ .Version }}_windows_amd64.zip` (or `arm64` for ARM laptops), unzip it and double-click `landlord.exe`.
+    The program isn't code-signed yet, so Windows shows a SmartScreen warning: click "More info", then "Run anyway".
+    See [the user guide](https://github.com/loehnertz/LANdlord/blob/master/docs/USER-GUIDE.md) for the full walkthrough.

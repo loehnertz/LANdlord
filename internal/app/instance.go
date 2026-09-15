@@ -52,5 +52,5 @@ func existingInstance(dataDir string) (string, bool) {
 	if resp.StatusCode != http.StatusOK {
 		return "", false
 	}
-	return info.BaseURL + "/#" + info.Token, true
+	return info.BaseURL + "/?t=" + info.Token, true
 }

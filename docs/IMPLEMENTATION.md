@@ -36,6 +36,10 @@
 - Sleep detection compares wall-clock time between 5 s ticks (a gap over 30 s is a sleep) instead of subscribing to power notifications. It needs no Windows API and catches lid-close suspends as well.
 - Router identification drops the MAC vendor table (see the updated DESIGN.md): TR-064 and UPnP descriptions are authoritative.
 - DOCSIS levels for cable FRITZ!Boxes moved to "Later" in DESIGN.md.
+- TCP/443 traceroute is not implemented in v1. It was best effort in the spec, and raw-socket behaviour on Windows can't be verified without real hardware; the ICMP traceroute covers the path.
+- Failures from targets and services that never worked during the session (broken IPv6, blocked STUN ports, a blocked website) are ignored when finding problems, and only the Windows resolver's DNS failures count as a symptom. Otherwise one blocked endpoint would mark the whole recording as a problem.
+- Configured DNS servers are measured only when they are IPv4, because Windows often lists unreachable default IPv6 servers (`fec0::`).
+- The status page token travels as a `?t=` query parameter instead of a URL fragment, because Windows' `ShellExecute` doesn't reliably keep fragments. The page removes it from the address bar.
 - Platform packages are `internal/platform/winplat` and `internal/platform/unixplat`, and the constructor for the current OS is `host.New()` in `internal/platform/host`. A `platform.Current()` inside `internal/platform` would create an import cycle, because the implementations import the interface package.
 
 ## Prerequisites

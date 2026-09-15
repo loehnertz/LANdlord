@@ -63,7 +63,7 @@ func TestMeasure(t *testing.T) {
 }
 
 func TestDefaultResolvers(t *testing.T) {
-	fake := &platform.Fake{RouteValue: platform.Route{DNSServers: []netip.Addr{netip.MustParseAddr("192.168.178.1"), netip.MustParseAddr("1.1.1.1")}}}
+	fake := &platform.Fake{RouteValue: platform.Route{DNSServers: []netip.Addr{netip.MustParseAddr("192.168.178.1"), netip.MustParseAddr("fec0:0:0:ffff::1"), netip.MustParseAddr("1.1.1.1")}}}
 	got := New(fake, nil, 0).defaultResolvers()
 	var labels []string
 	for _, r := range got {

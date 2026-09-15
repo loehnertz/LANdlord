@@ -6,6 +6,7 @@ on:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -18,6 +19,9 @@ jobs:
       - run: go test ./...
         env:
           CGO_ENABLED: "0"
+      - name: Windows API tests (ICMP, routes, Wi-Fi when available)
+        if: runner.os == 'Windows'
+        run: go test -v -tags windowsapi ./internal/platform/winplat/
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -26,13 +30,18 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run
-  cross-build:
+  windows-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./...
-      - run: GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build ./...
-      - run: GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./...
+      - run: go run github.com/tc-hib/go-winres@v0.3.3 make --in winres/winres.json --out cmd/landlord/rsrc
+      - run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H=windowsgui -X github.com/loehnertz/LANdlord/internal/version.Commit=${GITHUB_SHA::7}" -o dist/landlord.exe ./cmd/landlord
+      - run: GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H=windowsgui" -o dist/landlord-arm64.exe ./cmd/landlord
+      - run: GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o /dev/null ./cmd/landlord
+      - uses: actions/upload-artifact@v4
+        with:
+          name: landlord-windows
+          path: dist/*.exe
