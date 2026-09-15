@@ -13,6 +13,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -68,14 +70,49 @@ type Server struct {
 	token string
 	port  int
 	srv   *http.Server
+
+	// reportCodes are single-use codes for opening the report so far in a new tab, so the main
+	// token never appears in a URL.
+	codesMu     sync.Mutex
+	reportCodes map[string]time.Time
+	now         func() time.Time
 }
+
+const reportCodeTTL = time.Minute
 
 func New(c Controller) (*Server, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return nil, err
 	}
-	return &Server{c: c, token: hex.EncodeToString(b)}, nil
+	return &Server{c: c, token: hex.EncodeToString(b), reportCodes: map[string]time.Time{}, now: time.Now}, nil
+}
+
+func (s *Server) newReportCode() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	code := hex.EncodeToString(b)
+	s.codesMu.Lock()
+	defer s.codesMu.Unlock()
+	now := s.now()
+	for c, issued := range s.reportCodes {
+		if now.Sub(issued) > reportCodeTTL {
+			delete(s.reportCodes, c)
+		}
+	}
+	s.reportCodes[code] = now
+	return code, nil
+}
+
+// redeemReportCode consumes a code; it is valid once and for a minute.
+func (s *Server) redeemReportCode(code string) bool {
+	s.codesMu.Lock()
+	defer s.codesMu.Unlock()
+	issued, ok := s.reportCodes[code]
+	delete(s.reportCodes, code)
+	return ok && s.now().Sub(issued) <= reportCodeTTL
 }
 
 func (s *Server) Token() string { return s.token }
@@ -175,6 +212,28 @@ func (s *Server) Handler() http.Handler {
 			httpError(w, http.StatusInternalServerError, err)
 		}
 	}))
+	mux.HandleFunc("/api/report-link", s.api(http.MethodPost, false, func(w http.ResponseWriter, r *http.Request) {
+		code, err := s.newReportCode()
+		if err != nil {
+			httpError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, map[string]string{"url": "/report/" + code})
+	}))
+	mux.HandleFunc("/report/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if !s.redeemReportCode(strings.TrimPrefix(r.URL.Path, "/report/")) {
+			http.Error(w, "This link has expired. Go back to the LANdlord page and click \"See the report so far\" again.", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := s.c.ReportSoFar(w); err != nil {
+			httpError(w, http.StatusInternalServerError, err)
+		}
+	})
 	return s.guard(mux)
 }
 

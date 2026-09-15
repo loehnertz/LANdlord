@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 type fakeController struct {
@@ -116,6 +117,30 @@ func TestEndpoints(t *testing.T) {
 	if rec := do(h, "POST", "/api/contract", host, s.Token(), `{"mbps":-1}`); rec.Code != http.StatusBadRequest {
 		t.Fatalf("invalid contract: %d", rec.Code)
 	}
+	link := do(h, "POST", "/api/report-link", host, s.Token(), "")
+	var linkBody struct {
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal(link.Body.Bytes(), &linkBody); err != nil || !strings.HasPrefix(linkBody.URL, "/report/") {
+		t.Fatalf("report link: %d %s", link.Code, link.Body)
+	}
+	if rec := do(h, "GET", linkBody.URL, host, "", ""); rec.Code != http.StatusOK || rec.Body.String() != "<html>report</html>" {
+		t.Fatalf("report via link: %d %s", rec.Code, rec.Body)
+	}
+	if rec := do(h, "GET", linkBody.URL, host, "", ""); rec.Code != http.StatusNotFound {
+		t.Fatalf("second use of a report link: %d", rec.Code)
+	}
+	if rec := do(h, "GET", "/report/deadbeef", host, "", ""); rec.Code != http.StatusNotFound {
+		t.Fatalf("unknown report link: %d", rec.Code)
+	}
+	expiring := do(h, "POST", "/api/report-link", host, s.Token(), "")
+	_ = json.Unmarshal(expiring.Body.Bytes(), &linkBody)
+	s.now = func() time.Time { return time.Now().Add(2 * reportCodeTTL) }
+	if rec := do(h, "GET", linkBody.URL, host, "", ""); rec.Code != http.StatusNotFound {
+		t.Fatalf("expired report link: %d", rec.Code)
+	}
+	s.now = time.Now
+
 	rec = do(h, "GET", "/api/report-so-far", host, s.Token(), "")
 	if rec.Code != http.StatusOK || rec.Body.String() != "<html>report</html>" {
 		t.Fatalf("report so far: %d %s", rec.Code, rec.Body)

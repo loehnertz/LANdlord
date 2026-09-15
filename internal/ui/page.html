@@ -251,16 +251,12 @@ code { overflow-wrap: anywhere; }
     });
   });
 
-  // The token only travels in a header, so the report is fetched and shown from a local blob.
+  // The token only travels in headers; the new tab opens a single-use link instead.
   $("so-far").addEventListener("click", function () {
     var tab = window.open("", "_blank");
     if (tab) tab.document.write("<p style=\"font-family:system-ui;padding:2em\">Creating the report so far…</p>");
-    fetch("/api/report-so-far", { headers: { "X-Landlord-Token": token } }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.blob();
-    }).then(function (blob) {
-      var url = URL.createObjectURL(new Blob([blob], { type: "text/html" }));
-      if (tab) { tab.location = url; } else { window.location = url; }
+    api("POST", "/api/report-link").then(function (data) {
+      if (tab) { tab.location.href = data.url; } else { window.location.href = data.url; }
     }).catch(function (e) {
       if (tab) tab.close();
       showError("Couldn't create the report so far: " + e.message);
