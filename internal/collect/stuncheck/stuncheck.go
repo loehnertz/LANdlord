@@ -103,7 +103,7 @@ func (c *Collector) burstOnce(ctx context.Context, server string, sink record.Si
 			mu.Lock()
 			if t, ok := sentAt[m.TransactionID]; ok {
 				if _, dup := rtts[m.TransactionID]; !dup {
-					rtts[m.TransactionID] = float64(time.Since(t).Microseconds()) / 1000
+					rtts[m.TransactionID] = float64(time.Since(t)) / float64(time.Millisecond)
 				}
 			}
 			mu.Unlock()

@@ -123,7 +123,7 @@ func (c *Collector) measure(ctx context.Context, r resolver, host string, sink r
 		rec.Values = map[string]float64{"failed": 1}
 		rec.Attrs["error"] = err.Error()
 	} else {
-		rec.Values = map[string]float64{"ms": float64(elapsed.Microseconds()) / 1000}
+		rec.Values = map[string]float64{"ms": float64(elapsed) / float64(time.Millisecond)}
 	}
 	sink.Emit(rec)
 }

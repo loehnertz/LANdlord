@@ -190,7 +190,7 @@ func (c *Collector) worker(ctx context.Context, sink record.Sink, t target) {
 		case err != nil:
 			attrs["error"] = err.Error()
 		case reply.Status == platform.EchoOK:
-			values = map[string]float64{"rtt_ms": float64(reply.RTT.Microseconds()) / 1000}
+			values = map[string]float64{"rtt_ms": float64(reply.RTT) / float64(time.Millisecond)}
 		}
 		sink.Emit(record.Record{Time: now, Collector: record.CPing, Kind: record.KindMetric, Name: record.NEcho, Target: t.label, Values: values, Attrs: attrs})
 		select {

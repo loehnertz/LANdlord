@@ -110,7 +110,7 @@ func (c *Collector) fetch(ctx context.Context, host string, sink record.Sink) {
 		if from.IsZero() || to.IsZero() {
 			return 0
 		}
-		return float64(to.Sub(from).Microseconds()) / 1000
+		return float64(to.Sub(from)) / float64(time.Millisecond)
 	}
 	rec.Values = map[string]float64{
 		"connect_ms": ms(connectStart, connectDone),
