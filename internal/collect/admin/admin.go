@@ -35,6 +35,6 @@ func (c *Collector) Run(ctx context.Context, sink record.Sink) error {
 			sink.Emit(record.Info(record.CAdmin, record.NDriver, "", time.Now(), info.Properties))
 		}
 	}
-	<-ctx.Done()
+	c.traceLoop(ctx, sink)
 	return nil
 }

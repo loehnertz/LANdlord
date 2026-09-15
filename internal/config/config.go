@@ -42,6 +42,12 @@ type Thresholds struct {
 	DNSSlowMs       float64  `toml:"dns_slow_ms"`
 	RSSIStandingDBm float64  `toml:"rssi_standing_dbm"`
 
+	// Cable (DOCSIS) signal levels as reported by the modem.
+	CableUSPowerMaxDBmV float64 `toml:"cable_us_power_max_dbmv"`
+	CableDSPowerMinDBmV float64 `toml:"cable_ds_power_min_dbmv"`
+	CableDSPowerMaxDBmV float64 `toml:"cable_ds_power_max_dbmv"`
+	CableMERMinDB       float64 `toml:"cable_mer_min_db"`
+
 	// Live verdict readiness.
 	LikelyMinAwake        Duration `toml:"likely_min_awake"`
 	LikelyMinBad          Duration `toml:"likely_min_bad"`
@@ -105,6 +111,7 @@ func Default() Config {
 		GatewayFloorMs: 30, GatewayFactor: 5,
 		RSSIWeakDBm: -70, RxRatioWeak: 0.3, RetryPct: 10, OverlapAPs: 4,
 		RouterUtil: 0.8, LaptopShare: 0.2, DNSSlowMs: 500, RSSIStandingDBm: -67,
+		CableUSPowerMaxDBmV: 51, CableDSPowerMinDBmV: -8, CableDSPowerMaxDBmV: 15, CableMERMinDB: 30,
 		LikelyMinAwake: Duration{30 * time.Minute}, LikelyMinBad: Duration{time.Minute}, LikelyMinShare: 0.5,
 		ConfidentMinAwake: Duration{2 * time.Hour}, ConfidentMinBad: Duration{3 * time.Minute}, ConfidentMinShare: 0.6,
 		ConfidentMinIncidents: 2,

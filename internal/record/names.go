@@ -47,6 +47,7 @@ const (
 	NWANReconnect = "wan_reconnect"
 	NTunnel       = "tunnel"
 	NDSL          = "dsl"
+	NDOCSIS       = "docsis"
 	NResync       = "resync"
 	NDeviceLog    = "device_log"
 	NWlanHistory  = "wlan_history"

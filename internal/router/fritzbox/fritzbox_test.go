@@ -40,14 +40,41 @@ func envelope(inner string) string {
 	return `<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>` + inner + `</s:Body></s:Envelope>`
 }
 
-// fakeFritz serves TR-064 with digest auth; counters and sync rate change on every call.
-func fakeFritz(t *testing.T, password string, dsl bool) *httptest.Server {
+// fakeFritz serves TR-064 with digest auth; counters and sync rate change on every call. Without
+// dsl it behaves like a cable model, which serves DOCSIS values through the web login when docsis is set.
+func fakeFritz(t *testing.T, password string, dsl, docsis bool) *httptest.Server {
 	t.Helper()
-	var calls atomic.Int32
+	var calls, webCalls atomic.Int32
 	var mu sync.Mutex
+	const webChallenge = "2$1000$aabb$100$ccdd"
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/tr64desc.xml" {
+		switch r.URL.Path {
+		case "/tr64desc.xml":
 			_, _ = io.WriteString(w, tr64desc)
+			return
+		case "/login_sid.lua":
+			sid := emptySID
+			if r.Method == http.MethodPost {
+				_ = r.ParseForm()
+				expected, _ := solveChallenge(webChallenge, password)
+				if r.PostForm.Get("response") == expected && r.PostForm.Get("username") == "fritz1234" {
+					sid = "abc123"
+				}
+			}
+			_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="utf-8"?><SessionInfo><SID>%s</SID><Challenge>%s</Challenge><BlockTime>0</BlockTime><Rights></Rights><Users><User>admin</User><User last="1">fritz1234</User></Users></SessionInfo>`, sid, webChallenge)
+			return
+		case "/data.lua":
+			_ = r.ParseForm()
+			if r.PostForm.Get("sid") != "abc123" || r.PostForm.Get("page") != "docInfo" {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			if !docsis {
+				_, _ = io.WriteString(w, `{"data":{"channelDs":{},"channelUs":{}}}`)
+				return
+			}
+			n := webCalls.Add(1)
+			_, _ = io.WriteString(w, strings.Replace(docInfoFixture, `"nonCorrErrors":3`, fmt.Sprintf(`"nonCorrErrors":%d`, 3+5*n), 1))
 			return
 		}
 		ch := challenge{realm: "F!Box SOAP-Auth", nonce: "ABCDEF0123456789", qop: "auth"}
@@ -94,7 +121,7 @@ func fakeFritz(t *testing.T, password string, dsl bool) *httptest.Server {
 }
 
 func TestClientCall(t *testing.T) {
-	srv := fakeFritz(t, "secret", true)
+	srv := fakeFritz(t, "secret", true, true)
 	defer srv.Close()
 	c := &Client{Base: srv.URL, User: "admin", Password: "secret", HTTP: srv.Client()}
 	info, err := c.Call(context.Background(), dslService, "GetInfo")
@@ -109,7 +136,7 @@ func TestClientCall(t *testing.T) {
 
 func runCollector(t *testing.T, srv *httptest.Server, creds func() (string, string, bool), until func(*record.Buffer) bool) (*record.Buffer, error) {
 	t.Helper()
-	c := &Collector{base: srv.URL, creds: creds, every: 5 * time.Millisecond, logEvery: time.Hour, poll: 5 * time.Millisecond}
+	c := &Collector{base: srv.URL, webBase: srv.URL, creds: creds, every: 5 * time.Millisecond, logEvery: time.Hour, poll: 5 * time.Millisecond}
 	var buf record.Buffer
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -133,7 +160,7 @@ func runCollector(t *testing.T, srv *httptest.Server, creds func() (string, stri
 }
 
 func TestCollectorDSL(t *testing.T) {
-	srv := fakeFritz(t, "secret", true)
+	srv := fakeFritz(t, "secret", true, true)
 	defer srv.Close()
 	var entered atomic.Bool
 	creds := func() (string, string, bool) { return "", "secret", entered.Load() }
@@ -162,7 +189,7 @@ func TestCollectorDSL(t *testing.T) {
 }
 
 func TestCollectorWrongPasswordAndCableRouter(t *testing.T) {
-	srv := fakeFritz(t, "secret", true)
+	srv := fakeFritz(t, "secret", true, true)
 	defer srv.Close()
 	buf, err := runCollector(t, srv, func() (string, string, bool) { return "", "wrong", true }, func(b *record.Buffer) bool {
 		return len(b.Filter(record.CFritz, record.CFritz)) > 0
@@ -174,10 +201,44 @@ func TestCollectorWrongPasswordAndCableRouter(t *testing.T) {
 		t.Fatalf("unavailable = %+v", u)
 	}
 
-	cable := fakeFritz(t, "secret", false)
-	defer cable.Close()
-	_, err = runCollector(t, cable, func() (string, string, bool) { return "", "secret", true }, func(*record.Buffer) bool { return false })
-	if !errors.Is(err, collect.ErrPermanent) || !strings.Contains(err.Error(), "no DSL line statistics") {
-		t.Fatalf("cable router error = %v", err)
+	neither := fakeFritz(t, "secret", false, false)
+	defer neither.Close()
+	_, err = runCollector(t, neither, func() (string, string, bool) { return "", "secret", true }, func(*record.Buffer) bool { return false })
+	if !errors.Is(err, collect.ErrPermanent) || !strings.Contains(err.Error(), "no line statistics") {
+		t.Fatalf("router without DSL or DOCSIS: error = %v", err)
+	}
+}
+
+func TestCollectorCable(t *testing.T) {
+	srv := fakeFritz(t, "secret", false, true)
+	defer srv.Close()
+	buf, err := runCollector(t, srv, func() (string, string, bool) { return "", "secret", true }, func(b *record.Buffer) bool {
+		return len(b.Filter(record.CFritz, record.NDOCSIS)) >= 2
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recs := buf.Filter(record.CFritz, record.NDOCSIS)
+	first, second := recs[0].Values, recs[1].Values
+	if first["ds_channels"] != 3 || first["us_power_max_dbmv"] != 47.5 || first["ds_mer_min_db"] != 35.1 || first["ds_power_min_dbmv"] != -2.3 {
+		t.Fatalf("first docsis values = %v", first)
+	}
+	if _, ok := first["noncorr_errors_delta"]; ok {
+		t.Fatal("first sample should have no error delta")
+	}
+	if second["noncorr_errors_delta"] != 5 || second["corr_errors_delta"] != 0 {
+		t.Fatalf("second docsis deltas = %v", second)
+	}
+
+	wrong := fakeFritz(t, "secret", false, true)
+	defer wrong.Close()
+	buf, err = runCollector(t, wrong, func() (string, string, bool) { return "", "nope", true }, func(b *record.Buffer) bool {
+		return len(b.Filter(record.CFritz, record.CFritz)) > 0
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u := buf.Filter(record.CFritz, record.CFritz); u[0].Attrs["reason"] != "router password rejected" {
+		t.Fatalf("unavailable = %+v", u)
 	}
 }

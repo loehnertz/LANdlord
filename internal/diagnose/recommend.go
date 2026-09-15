@@ -63,6 +63,7 @@ var findingRecs = map[string][]recText{
 	"bufferbloat":     culpritRecs[LANSaturation][1:],
 	"slow_speed":      {{Landlord, "Tell the provider the contracted speed isn't delivered, using the speed test table in this report."}},
 	"mtu":             {{Landlord, "Check the router's MTU setting; the path MTU is below 1500."}},
+	"cable_levels":    {{Landlord, "Ask the cable provider to measure the signal at the wall socket and check the building's amplifier and wiring; the modem reports levels outside the normal range."}},
 }
 
 const germanyHint = "In Germany, measure with the Bundesnetzagentur's Breitbandmessung desktop app. If the provider keeps delivering less than contracted, section 57 of the Telecommunications Act (TKG) lets you reduce the price or cancel early."

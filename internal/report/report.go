@@ -406,17 +406,31 @@ func routerDetails(s *aggregate.Session) ([]kv, string) {
 		}
 	}
 	for i := len(s.Buckets) - 1; i >= 0; i-- {
-		if b := s.Buckets[i]; b.DSL.Present {
-			out = append(out, kv{Key: "DSL noise margin (downstream)", Value: fmt.Sprintf("%.1f dB", b.DSL.SNRDownDB)})
-			break
+		b := s.Buckets[i]
+		if !b.DSL.Present {
+			continue
 		}
+		if b.DSL.Cable {
+			value := fmt.Sprintf("downstream %.1f to %.1f dBmV, upstream up to %.1f dBmV", b.DSL.CableDSPowerMin, b.DSL.CableDSPowerMax, b.DSL.CableUSPowerMax)
+			if b.DSL.CableDSMERMin > 0 {
+				value += fmt.Sprintf(", signal quality (MER) from %.1f dB", b.DSL.CableDSMERMin)
+			}
+			out = append(out, kv{Key: "Cable signal (latest)", Value: value})
+		} else {
+			out = append(out, kv{Key: "DSL noise margin (downstream)", Value: fmt.Sprintf("%.1f dB", b.DSL.SNRDownDB)})
+		}
+		break
 	}
-	var crc float64
+	var crc, uncorrectable float64
 	for _, b := range s.Buckets {
 		crc += b.DSL.CRCDelta
+		uncorrectable += b.DSL.CableUncorrectableDelta
 	}
 	if crc > 0 {
 		out = append(out, kv{Key: "DSL transmission errors (CRC)", Value: fmt.Sprintf("%.0f during the recording", crc)})
+	}
+	if uncorrectable > 0 {
+		out = append(out, kv{Key: "Cable uncorrectable errors", Value: fmt.Sprintf("%.0f during the recording", uncorrectable)})
 	}
 	log := ""
 	if l, ok := s.LatestInfo(record.CFritz, record.NDeviceLog); ok {

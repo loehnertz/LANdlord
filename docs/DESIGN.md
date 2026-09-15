@@ -80,6 +80,7 @@ Windows does not expose the noise floor, so there is no SNR on the Wi-Fi side. R
 | Gateway MAC or IP changes, DHCP lease changes, configured DNS servers | `GetIpNetTable2`, `GetAdaptersAddresses` | 30 s |
 | WAN uptime, external IP, WAN link rates, total bytes through the router | UPnP IGD (`WANCommonInterfaceConfig`, `WANIPConnection`) via SSDP; best effort | 30 s |
 | FRITZ!Box: DSL noise margin, attenuation, CRC/FEC/HEC errors, sync rates, resyncs (sync rate changes); router event log | TR-064 on port 49000 with digest auth; needs the router password entered on the status page | 60 s |
+| FRITZ!Box cable models: DOCSIS downstream power and MER, upstream power, correctable and uncorrectable errors | Web interface login (PBKDF2 challenge, MD5 fallback) and `data.lua?page=docInfo`, used when TR-064 has no DSL service; same password | 60 s |
 
 The router plugin interface is written so other brands can be added later. v1 ships only the FRITZ!Box plugin.
 
@@ -108,7 +109,7 @@ Speed tests are skipped when the laptop itself sent or received more than 1 Mbit
 |---|---|
 | `netsh wlan show wlanreport` | Runs once; the generated HTML (last 3 days of Wi-Fi sessions and disconnect reasons) is embedded in the report inside a sandboxed iframe |
 | Full Event Log access | WLAN-AutoConfig, DHCP client and NCSI connectivity events for the last 7 days |
-| TCP/443 traceroute | Not in v1 (see "Later"); the ICMP traceroute covers the path |
+| TCP/443 traceroute | Every 15 minutes: TCP connection attempts to 1.1.1.1:443 with increasing TTL, answered routers read from a raw ICMP socket and matched by source port; stops after five silent hops |
 | Wi-Fi driver advanced properties | Roaming aggressiveness, power saving, preferred band, read from the adapter's registry key; read only |
 
 The helper is a second `landlord.exe --helper` process started with `ShellExecute` and the `runas` verb. It writes records into the same session directory through the store package, exits when the parent process exits, and never opens a browser. Keeping the browser and tray in the unelevated process avoids running a browser as admin.
@@ -350,8 +351,6 @@ LICENSE  README.md  CONTRIBUTING.md
 - Optional upload to a small self-hosted endpoint for live remote viewing.
 - Real Wi-Fi collectors for macOS and Linux.
 - Router plugins beyond FRITZ!Box.
-- TCP/443 traceroute from the elevated helper (per-socket TTL plus a raw ICMP listener).
-- DOCSIS signal levels for FRITZ!Box cable models (needs the web UI login flow and `data.lua`, not TR-064).
 - Code signing.
 
 ## Decisions

@@ -2,6 +2,7 @@ package diagnose
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/loehnertz/LANdlord/internal/aggregate"
@@ -57,12 +58,21 @@ func findings(s *aggregate.Session, c *sessionCtx, r *Result) []Finding {
 	var out []Finding
 	add := func(id, title, detail string) { out = append(out, Finding{ID: id, Title: title, Detail: detail}) }
 
+	var usPower, dsPowerMin, dsPowerMax, mer []float64
 	var rssi, local, public []float64
 	var connected, band24, batteryAwake, batteryBad, acAwake, acBad int
 	for i := range s.Buckets {
 		b := &s.Buckets[i]
 		if b.Asleep {
 			continue
+		}
+		if d := b.DSL; d.Cable {
+			usPower = append(usPower, d.CableUSPowerMax)
+			dsPowerMin = append(dsPowerMin, d.CableDSPowerMin)
+			dsPowerMax = append(dsPowerMax, d.CableDSPowerMax)
+			if d.CableDSMERMin > 0 {
+				mer = append(mer, d.CableDSMERMin)
+			}
 		}
 		if b.Wifi.Connected {
 			connected++
@@ -148,6 +158,27 @@ func findings(s *aggregate.Session, c *sessionCtx, r *Result) []Finding {
 		if ml, mp := aggregate.Median(local), aggregate.Median(public); mp > 0 && ml > 3*mp {
 			add("slow_dns", "Slow DNS",
 				fmt.Sprintf("Name lookups through the router or provider took %.0f ms on average, compared with %.0f ms for a public DNS server.", ml, mp))
+		}
+	}
+	if len(usPower) > 0 {
+		var issues []string
+		if m := aggregate.Median(usPower); m > th.CableUSPowerMaxDBmV {
+			issues = append(issues, fmt.Sprintf("the modem transmits at %.1f dBmV (normal: up to %.0f)", m, th.CableUSPowerMaxDBmV))
+		}
+		if m := aggregate.Median(dsPowerMin); m < th.CableDSPowerMinDBmV {
+			issues = append(issues, fmt.Sprintf("the weakest downstream channel arrives at %.1f dBmV (normal: from %.0f)", m, th.CableDSPowerMinDBmV))
+		}
+		if m := aggregate.Median(dsPowerMax); m > th.CableDSPowerMaxDBmV {
+			issues = append(issues, fmt.Sprintf("the strongest downstream channel arrives at %.1f dBmV (normal: up to %.0f)", m, th.CableDSPowerMaxDBmV))
+		}
+		if len(mer) > 0 {
+			if m := aggregate.Median(mer); m < th.CableMERMinDB {
+				issues = append(issues, fmt.Sprintf("the weakest channel's signal quality (MER) is %.1f dB (normal: from %.0f)", m, th.CableMERMinDB))
+			}
+		}
+		if len(issues) > 0 {
+			add("cable_levels", "Cable signal levels out of range",
+				"The cable modem reports signal levels outside the normal range: "+strings.Join(issues, "; ")+". This usually points to the wiring or amplifiers in the building, or the provider's cable network.")
 		}
 	}
 	if h, ok := s.LatestInfo(record.CEventLog, record.NWlanHistory); ok {

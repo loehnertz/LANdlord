@@ -92,6 +92,17 @@ func TestClassify(t *testing.T) {
 			want: AccessLine, signals: []string{"internet", "hop1", "crc"},
 		},
 		{
+			name: "cable line",
+			mutate: func(b *aggregate.Bucket) {
+				for _, h := range []string{"hop1", "hop2", "hop3"} {
+					lossy(b.Paths[h], 6)
+				}
+				internetLoss(b, 6)
+				b.DSL = aggregate.DSLStats{Present: true, Cable: true, CableUncorrectableDelta: 40, CableUSPowerMax: 53, CableDSMERMin: 27, CableDSPowerMin: 1, CableDSPowerMax: 5}
+			},
+			want: AccessLine, signals: []string{"internet", "hop1", "cable_errors", "cable_upstream", "cable_mer"},
+		},
+		{
 			name: "degradation beyond first hop",
 			mutate: func(b *aggregate.Bucket) {
 				lossy(b.Paths["hop2"], 6)

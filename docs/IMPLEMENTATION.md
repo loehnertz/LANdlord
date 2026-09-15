@@ -36,7 +36,8 @@
 - Sleep detection compares wall-clock time between 5 s ticks (a gap over 30 s is a sleep) instead of subscribing to power notifications. It needs no Windows API and catches lid-close suspends as well.
 - Router identification drops the MAC vendor table (see the updated DESIGN.md): TR-064 and UPnP descriptions are authoritative.
 - DOCSIS levels for cable FRITZ!Boxes moved to "Later" in DESIGN.md.
-- TCP/443 traceroute is not implemented in v1. It was best effort in the spec, and raw-socket behaviour on Windows can't be verified without real hardware; the ICMP traceroute covers the path.
+- TCP/443 traceroute (added after v0.1.0) binds each attempt to a chosen local port instead of reading the port inside `Dialer.Control`, because Go on Windows binds the socket itself before `ConnectEx`. It stops after five silent hops.
+- DOCSIS values for cable FRITZ!Boxes (added after v0.1.0) come from the web interface (`login_sid.lua` + `data.lua?page=docInfo`), because TR-064 has no cable line service. Field names differ between firmware versions, so parsing accepts numbers or numeric strings and MER or MSE.
 - Failures from targets and services that never worked during the session (broken IPv6, blocked STUN ports, a blocked website) are ignored when finding problems, and only the Windows resolver's DNS failures count as a symptom. Otherwise one blocked endpoint would mark the whole recording as a problem.
 - Configured DNS servers are measured only when they are IPv4, because Windows often lists unreachable default IPv6 servers (`fec0::`).
 - The status page token travels as a `?t=` query parameter instead of a URL fragment, because Windows' `ShellExecute` doesn't reliably keep fragments. The page removes it from the address bar.

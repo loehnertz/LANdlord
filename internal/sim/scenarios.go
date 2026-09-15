@@ -35,6 +35,17 @@ func init() {
 	})
 
 	register(Scenario{
+		Name: "cable_line", Description: "A cable connection where the modem reports uncorrectable errors and high upstream power during outages", Duration: 6 * time.Hour,
+		Cond: func(t time.Time, _ *time.Location) Condition {
+			if t.Minute()%30 >= 3 {
+				return Condition{Cable: true}
+			}
+			return Condition{Cable: true, HopLossPct: 15, HopRTTms: 160, InetLossPct: 15, Inet6LossPct: 15, InetRTTms: 170, JitterMs: 35,
+				CableUncorrectable: 250, CableUSPower: 53, CableDSMER: 28}
+		},
+	})
+
+	register(Scenario{
 		Name: "evening_congestion", Description: "Latency beyond the router rises every evening from 19:00 to 23:00", Duration: 48 * time.Hour,
 		Cond: func(t time.Time, loc *time.Location) Condition {
 			if h := t.In(loc).Hour(); h < 19 || h >= 23 {

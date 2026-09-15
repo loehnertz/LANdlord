@@ -14,8 +14,8 @@ LANdlord measures every layer between the laptop and the internet at the same ti
 - DNS lookups through Windows, the router and public resolvers
 - connection and response times for Zoom, Teams, Meet, YouTube, Netflix and Google
 - an hourly, capped speed test with a bufferbloat grade
-- the router's own traffic counters and reconnects via UPnP, and DSL line statistics on FRITZ!Box routers (with the router password)
-- Windows' Wi-Fi history from the week before, and its Wi-Fi report, when admin rights are granted
+- the router's own traffic counters and reconnects via UPnP, and line statistics on FRITZ!Box routers (with the router password): DSL noise margin and errors, or DOCSIS signal levels and errors on cable models
+- Windows' Wi-Fi history from the week before, its Wi-Fi report, and a TCP traceroute on port 443, when admin rights are granted
 
 While recording, the status page already shows a likely cause once there is enough data. The full recording is optional.
 

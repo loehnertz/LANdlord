@@ -44,6 +44,7 @@ func TestScenarios(t *testing.T) {
 		{"hop_ratelimit", "", false},
 		{"weak_wifi", WifiSignal, false},
 		{"access_line", AccessLine, false},
+		{"cable_line", AccessLine, false},
 		{"periodic_scan", ClientDevice, false},
 		{"dns_trouble", DNS, false},
 		{"ipv4_tunnel", IPv4Tunnel, false},
@@ -67,6 +68,17 @@ func TestScenarios(t *testing.T) {
 			}
 			if tt.scenario == "periodic_scan" && !r.PeriodicSpikes {
 				t.Fatal("periodic spikes not detected")
+			}
+			if tt.scenario == "cable_line" {
+				found := false
+				for _, inc := range r.Incidents {
+					for _, e := range inc.Evidence {
+						found = found || e.Signal == "cable_errors"
+					}
+				}
+				if !found {
+					t.Fatal("cable errors missing from the incident evidence")
+				}
 			}
 		})
 	}

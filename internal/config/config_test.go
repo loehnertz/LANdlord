@@ -25,6 +25,9 @@ func TestDefaults(t *testing.T) {
 		th.ConfidentMinIncidents != 2 || th.QuietMinAwake.Duration != 2*time.Hour || th.QuietMaxProblemPct != 0.5 {
 		t.Fatalf("live verdict defaults wrong: %+v", th)
 	}
+	if th.CableUSPowerMaxDBmV != 51 || th.CableDSPowerMinDBmV != -8 || th.CableDSPowerMaxDBmV != 15 || th.CableMERMinDB != 30 {
+		t.Fatalf("cable defaults wrong: %+v", th)
+	}
 	if len(c.Targets.IPv4) != 3 || len(c.Targets.IPv6) != 3 || len(c.STUN.Servers) != 2 || len(c.HTTP.Targets) != 6 {
 		t.Fatalf("target defaults wrong: %+v", c)
 	}

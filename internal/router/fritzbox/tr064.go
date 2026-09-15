@@ -214,9 +214,11 @@ func isMissingService(err error) bool {
 	return errors.As(err, &status) && status == http.StatusNotFound || errors.As(err, &fault) && fault.Code == 401
 }
 
-// Collector records DSL statistics once the router password is entered on the status page.
+// Collector records DSL statistics, or DOCSIS values on cable models, once the router password
+// is entered on the status page.
 type Collector struct {
 	base     string
+	webBase  string
 	creds    func() (user, pass string, ok bool)
 	every    time.Duration
 	logEvery time.Duration
@@ -227,7 +229,7 @@ func New(gateway netip.Addr, creds func() (user, pass string, ok bool), every ti
 	if every <= 0 {
 		every = time.Minute
 	}
-	return &Collector{base: "http://" + gateway.String() + ":49000", creds: creds, every: every, logEvery: time.Hour, poll: 10 * time.Second}
+	return &Collector{base: "http://" + gateway.String() + ":49000", webBase: "http://" + gateway.String(), creds: creds, every: every, logEvery: time.Hour, poll: 10 * time.Second}
 }
 
 func (c *Collector) Name() string { return record.CFritz }
@@ -283,7 +285,8 @@ func (c *Collector) Run(ctx context.Context, sink record.Sink) error {
 			sink.Emit(record.Unavailable(record.CFritz, time.Now(), "router password rejected"))
 			continue
 		case isMissingService(err):
-			return fmt.Errorf("%w: no DSL line statistics on this router", collect.ErrPermanent)
+			// Cable models have no DSL service over TR-064; their channel values are in the web interface.
+			return c.runCable(ctx, sink)
 		case err != nil:
 			if !c.wait(ctx, c.every) {
 				return nil
@@ -297,11 +300,11 @@ func (c *Collector) Run(ctx context.Context, sink record.Sink) error {
 			"snr_up_db":      tenths(info["NewUpstreamNoiseMargin"]),
 			"atten_down_db":  tenths(info["NewDownstreamAttenuation"]),
 			"atten_up_db":    tenths(info["NewUpstreamAttenuation"]),
-			"sync_down_kbps": number(info["NewDownstreamCurrRate"]),
-			"sync_up_kbps":   number(info["NewUpstreamCurrRate"]),
+			"sync_down_kbps": parseNumber(info["NewDownstreamCurrRate"]),
+			"sync_up_kbps":   parseNumber(info["NewUpstreamCurrRate"]),
 		}
 		if stats, err := client.Call(ctx, dslService, "GetStatisticsTotal"); err == nil {
-			cur := map[string]float64{"crc": number(stats["NewCRCErrors"]), "fec": number(stats["NewFECErrors"]), "hec": number(stats["NewHECErrors"])}
+			cur := map[string]float64{"crc": parseNumber(stats["NewCRCErrors"]), "fec": parseNumber(stats["NewFECErrors"]), "hec": parseNumber(stats["NewHECErrors"])}
 			if prevStats != nil {
 				for _, k := range []string{"crc", "fec", "hec"} {
 					values[k+"_delta"] = max(0, cur[k]-prevStats[k])
@@ -328,12 +331,62 @@ func (c *Collector) Run(ctx context.Context, sink record.Sink) error {
 	}
 }
 
-func number(s string) float64 {
+// runCable records DOCSIS channel values from the web interface of a cable FRITZ!Box.
+func (c *Collector) runCable(ctx context.Context, sink record.Sink) error {
+	web := &WebClient{Base: c.webBase, HTTP: &http.Client{Timeout: 15 * time.Second}}
+	var rejected string
+	var prev *DOCSISInfo
+	for {
+		user, pass, ok := c.creds()
+		if !ok || user+"\x00"+pass == rejected {
+			if !c.wait(ctx, c.poll) {
+				return nil
+			}
+			continue
+		}
+		info, err := web.DocInfo(ctx, user, pass)
+		if ctx.Err() != nil {
+			return nil
+		}
+		switch {
+		case errors.Is(err, ErrUnauthorized):
+			rejected = user + "\x00" + pass
+			sink.Emit(record.Unavailable(record.CFritz, time.Now(), "router password rejected"))
+			continue
+		case errors.Is(err, errNoDOCSIS), isMissingService(err):
+			return fmt.Errorf("%w: no line statistics on this router", collect.ErrPermanent)
+		case err != nil:
+			if !c.wait(ctx, c.every) {
+				return nil
+			}
+			continue
+		}
+		values := map[string]float64{
+			"ds_channels":       float64(info.DSChannels),
+			"us_channels":       float64(info.USChannels),
+			"ds_power_min_dbmv": info.DSPowerMin,
+			"ds_power_max_dbmv": info.DSPowerMax,
+			"us_power_max_dbmv": info.USPowerMax,
+			"ds_mer_min_db":     info.DSMERMin,
+		}
+		if prev != nil {
+			values["corr_errors_delta"] = max(0, info.CorrErrors-prev.CorrErrors)
+			values["noncorr_errors_delta"] = max(0, info.NonCorrErrors-prev.NonCorrErrors)
+		}
+		prev = &info
+		sink.Emit(record.Metric(record.CFritz, record.NDOCSIS, "", time.Now(), values))
+		if !c.wait(ctx, c.every) {
+			return nil
+		}
+	}
+}
+
+func parseNumber(s string) float64 {
 	v, _ := strconv.ParseFloat(strings.TrimSpace(s), 64)
 	return v
 }
 
-func tenths(s string) float64 { return number(s) / 10 }
+func tenths(s string) float64 { return parseNumber(s) / 10 }
 
 func abs(v float64) float64 {
 	if v < 0 {

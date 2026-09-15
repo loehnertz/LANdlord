@@ -101,6 +101,29 @@ func TestFindingsAndRecommendations(t *testing.T) {
 	}
 }
 
+func TestCableLevelsFinding(t *testing.T) {
+	s := newSession(60, func(_ int, b *aggregate.Bucket) {
+		b.DSL = aggregate.DSLStats{Present: true, Cable: true, CableUSPowerMax: 54, CableDSPowerMin: -10, CableDSPowerMax: 4, CableDSMERMin: 36}
+	})
+	r := Analyze(s, th())
+	var detail string
+	for _, f := range r.Findings {
+		if f.ID == "cable_levels" {
+			detail = f.Detail
+		}
+	}
+	if !strings.Contains(detail, "transmits at 54.0 dBmV") || !strings.Contains(detail, "-10.0 dBmV") || strings.Contains(detail, "MER") {
+		t.Fatalf("cable finding = %q", detail)
+	}
+	found := false
+	for _, rec := range r.Recommendations {
+		found = found || strings.Contains(rec.Text, "measure the signal at the wall socket")
+	}
+	if !found {
+		t.Fatal("cable recommendation missing")
+	}
+}
+
 func TestAsleepBucketsIgnored(t *testing.T) {
 	s := newSession(10, func(i int, b *aggregate.Bucket) {
 		if i == 3 {

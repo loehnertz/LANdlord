@@ -24,6 +24,10 @@ type Condition struct {
 	ConfiguredDNSFail, Roam      bool
 	IPv4Only                     bool // internet degradation applies to IPv4 targets only
 	FritzCRC                     float64
+	// Cable switches the router statistics from DSL to DOCSIS.
+	Cable                    bool
+	CableUncorrectable       float64
+	CableUSPower, CableDSMER float64
 }
 
 type Scenario struct {
@@ -131,8 +135,21 @@ func Run(sc Scenario, start time.Time, loc *time.Location, seed int64, sink reco
 		for _, h := range httpHost {
 			g.Sink.Emit(record.Metric(record.CHTTP, record.NFetch, h, t, map[string]float64{"connect_ms": c.InetRTTms, "tls_ms": c.InetRTTms * 1.5, "ttfb_ms": c.InetRTTms * 3}))
 		}
-		g.Sink.Emit(record.Metric(record.CFritz, record.NDSL, "", t, map[string]float64{
-			"snr_down_db": 9, "snr_up_db": 8, "sync_down_kbps": 100000, "sync_up_kbps": 40000, "crc_delta": c.FritzCRC}))
+		if c.Cable {
+			us, mer := c.CableUSPower, c.CableDSMER
+			if us == 0 {
+				us = 44
+			}
+			if mer == 0 {
+				mer = 38
+			}
+			g.Sink.Emit(record.Metric(record.CFritz, record.NDOCSIS, "", t, map[string]float64{
+				"ds_channels": 32, "us_channels": 5, "ds_power_min_dbmv": 2.5, "ds_power_max_dbmv": 7.1,
+				"us_power_max_dbmv": us, "ds_mer_min_db": mer, "corr_errors_delta": 12, "noncorr_errors_delta": c.CableUncorrectable}))
+		} else {
+			g.Sink.Emit(record.Metric(record.CFritz, record.NDSL, "", t, map[string]float64{
+				"snr_down_db": 9, "snr_up_db": 8, "sync_down_kbps": 100000, "sync_up_kbps": 40000, "crc_delta": c.FritzCRC}))
+		}
 	})
 	g.every(10*time.Minute, func(t time.Time) {
 		nets, _ := json.Marshal([]map[string]any{{"ssid": "neighbour", "rssi": -72, "channel": 40}})

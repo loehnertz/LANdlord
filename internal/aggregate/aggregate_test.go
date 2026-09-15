@@ -179,6 +179,18 @@ func TestRouterSamplesHeldForSixtySeconds(t *testing.T) {
 	}
 }
 
+func TestDOCSISStats(t *testing.T) {
+	meta := store.Meta{Start: t0, Duration: time.Hour, Finished: true, FinishedAt: t0.Add(10 * time.Second)}
+	recs := []record.Record{
+		record.Metric(record.CFritz, record.NDOCSIS, "", t0, map[string]float64{"ds_power_min_dbmv": 2, "ds_power_max_dbmv": 6, "us_power_max_dbmv": 45, "ds_mer_min_db": 38, "noncorr_errors_delta": 3}),
+		record.Metric(record.CFritz, record.NDOCSIS, "", t0.Add(5*time.Second), map[string]float64{"ds_power_min_dbmv": -1, "ds_power_max_dbmv": 5, "us_power_max_dbmv": 52, "ds_mer_min_db": 33, "noncorr_errors_delta": 4}),
+	}
+	d := build(t, meta, recs).Buckets[0].DSL
+	if !d.Present || !d.Cable || d.CableDSPowerMin != -1 || d.CableDSPowerMax != 6 || d.CableUSPowerMax != 52 || d.CableDSMERMin != 33 || d.CableUncorrectableDelta != 7 {
+		t.Fatalf("docsis stats = %+v", d)
+	}
+}
+
 func TestSpeedTestBucketsAreMarked(t *testing.T) {
 	meta := store.Meta{Start: t0, Duration: time.Hour, Finished: true, FinishedAt: t0.Add(2 * time.Minute)}
 	recs := []record.Record{

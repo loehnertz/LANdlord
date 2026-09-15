@@ -10,7 +10,7 @@ import (
 )
 
 func TestAllScenariosRegistered(t *testing.T) {
-	want := []string{"access_line", "dns_trouble", "evening_congestion", "healthy", "hop_ratelimit", "ipv4_tunnel", "lan_saturation", "periodic_scan", "weak_wifi"}
+	want := []string{"access_line", "cable_line", "dns_trouble", "evening_congestion", "healthy", "hop_ratelimit", "ipv4_tunnel", "lan_saturation", "periodic_scan", "weak_wifi"}
 	got := Names()
 	if len(got) != len(want) {
 		t.Fatalf("Names() = %v", got)

@@ -112,8 +112,20 @@ func (c *sessionCtx) lineEvidence(b *aggregate.Bucket) []Evidence {
 	if b.DSL.Resync {
 		ev = append(ev, Evidence{"resync", "The DSL line re-synchronised"})
 	}
-	if b.DSL.Present && b.DSL.SNRDownDB > 0 && b.DSL.SNRDownDB < 6 {
+	if b.DSL.Present && !b.DSL.Cable && b.DSL.SNRDownDB > 0 && b.DSL.SNRDownDB < 6 {
 		ev = append(ev, Evidence{"snr", fmt.Sprintf("The line's noise margin is low (%.1f dB)", b.DSL.SNRDownDB)})
+	}
+	if d := b.DSL; d.Cable {
+		th := c.th
+		if d.CableUncorrectableDelta > 0 {
+			ev = append(ev, Evidence{"cable_errors", fmt.Sprintf("The cable modem counted %.0f uncorrectable errors", d.CableUncorrectableDelta)})
+		}
+		if d.CableUSPowerMax > th.CableUSPowerMaxDBmV {
+			ev = append(ev, Evidence{"cable_upstream", fmt.Sprintf("The cable modem had to transmit at %.1f dBmV, above the usual limit of %.0f dBmV", d.CableUSPowerMax, th.CableUSPowerMaxDBmV)})
+		}
+		if d.CableDSMERMin > 0 && d.CableDSMERMin < th.CableMERMinDB {
+			ev = append(ev, Evidence{"cable_mer", fmt.Sprintf("The weakest cable channel's signal quality (MER) dropped to %.1f dB", d.CableDSMERMin)})
+		}
 	}
 	return ev
 }

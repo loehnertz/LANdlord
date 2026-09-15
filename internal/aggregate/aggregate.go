@@ -45,9 +45,16 @@ type RouterStats struct {
 	RxBps, TxBps, LinkDownBps, LinkUpBps float64
 }
 
+// DSLStats holds router line statistics: DSL values, or DOCSIS values when Cable is set.
 type DSLStats struct {
 	Present, Resync     bool
 	SNRDownDB, CRCDelta float64
+
+	Cable                            bool
+	CableUncorrectableDelta          float64
+	CableUSPowerMax                  float64
+	CableDSPowerMin, CableDSPowerMax float64
+	CableDSMERMin                    float64 // 0 when unknown
 }
 
 type Event struct {
@@ -376,6 +383,21 @@ func (s *Session) add(b *Bucket, a *accum, r record.Record) {
 		b.DSL.Present = true
 		b.DSL.SNRDownDB = v["snr_down_db"]
 		b.DSL.CRCDelta += v["crc_delta"]
+	case record.CFritz + "/" + record.NDOCSIS:
+		d := &b.DSL
+		if !d.Cable {
+			d.CableDSPowerMin, d.CableDSPowerMax = v["ds_power_min_dbmv"], v["ds_power_max_dbmv"]
+			d.CableUSPowerMax, d.CableDSMERMin = v["us_power_max_dbmv"], v["ds_mer_min_db"]
+		} else {
+			d.CableDSPowerMin = min(d.CableDSPowerMin, v["ds_power_min_dbmv"])
+			d.CableDSPowerMax = max(d.CableDSPowerMax, v["ds_power_max_dbmv"])
+			d.CableUSPowerMax = max(d.CableUSPowerMax, v["us_power_max_dbmv"])
+			if mer := v["ds_mer_min_db"]; mer > 0 && (d.CableDSMERMin == 0 || mer < d.CableDSMERMin) {
+				d.CableDSMERMin = mer
+			}
+		}
+		d.Present, d.Cable = true, true
+		d.CableUncorrectableDelta += v["noncorr_errors_delta"]
 	case record.CSpeed + "/" + record.NTest:
 		s.SpeedTests = append(s.SpeedTests, SpeedTest{
 			Time: r.Time, DownMbps: v["down_mbps"], UpMbps: v["up_mbps"], BloatMs: v["bloat_ms"], DurationS: v["duration_s"],
