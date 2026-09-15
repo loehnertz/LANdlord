@@ -83,7 +83,7 @@ code { overflow-wrap: anywhere; }
       <ul id="caveats"></ul>
       <p class="sub" id="progress"></p>
       <div class="row">
-        <a class="link-button" id="so-far" href="#" target="_blank" rel="noopener">See the report so far</a>
+        <button type="button" class="secondary" id="so-far">See the report so far</button>
       </div>
     </section>
 
@@ -203,7 +203,6 @@ code { overflow-wrap: anywhere; }
     $("progress").textContent = "Recorded " + duration((s.live.awake_minutes || 0) * 60) + ", problems measured for " + duration((s.live.problem_minutes || 0) * 60) + ". You marked " + s.marks + (s.marks === 1 ? " moment." : " moments.");
     $("remaining").textContent = s.finishing ? "Creating the report…" : "Recording stops by itself in " + duration(s.remaining_seconds) + ".";
     $("finish").disabled = !!s.finishing;
-    $("so-far").href = "/api/report-so-far?token=" + encodeURIComponent(token);
     $("router-box").hidden = !s.router_is_fritzbox;
     if (s.router_is_fritzbox && !s.router_needs_password) $("router-result").textContent = "Line statistics are being read.";
     var list = $("collectors");
@@ -249,6 +248,22 @@ code { overflow-wrap: anywhere; }
     api("POST", "/api/finish").then(refresh).catch(function (e) {
       showError("Creating the report failed: " + e.message);
       $("finish").disabled = false;
+    });
+  });
+
+  // The token only travels in a header, so the report is fetched and shown from a local blob.
+  $("so-far").addEventListener("click", function () {
+    var tab = window.open("", "_blank");
+    if (tab) tab.document.write("<p style=\"font-family:system-ui;padding:2em\">Creating the report so far…</p>");
+    fetch("/api/report-so-far", { headers: { "X-Landlord-Token": token } }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.blob();
+    }).then(function (blob) {
+      var url = URL.createObjectURL(new Blob([blob], { type: "text/html" }));
+      if (tab) { tab.location = url; } else { window.location = url; }
+    }).catch(function (e) {
+      if (tab) tab.close();
+      showError("Couldn't create the report so far: " + e.message);
     });
   });
 

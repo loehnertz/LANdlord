@@ -569,14 +569,17 @@ func thresholdDetails(th config.Thresholds) []kv {
 // redactSession returns a copy with network names, addresses and logs replaced.
 func redactSession(src *aggregate.Session) *aggregate.Session {
 	s := *src
-	piiKeys := map[string]bool{"ip": true, "external_ip": true, "ssid": true, "bssid": true, "mac": true, "networks": true, "path": true, "log": true}
+	piiKeys := map[string]bool{"ip": true, "external_ip": true, "ssid": true, "bssid": true, "mac": true, "path": true, "log": true}
 	scrub := func(recs []record.Record) []record.Record {
 		out := make([]record.Record, len(recs))
 		for i, r := range recs {
 			if len(r.Attrs) > 0 {
 				attrs := make(map[string]string, len(r.Attrs))
 				for k, val := range r.Attrs {
-					if piiKeys[k] {
+					switch {
+					case k == "networks":
+						val = redactNetworks(val)
+					case piiKeys[k]:
 						val = redacted
 					}
 					attrs[k] = val
@@ -600,6 +603,27 @@ func redactSession(src *aggregate.Session) *aggregate.Session {
 		s.Buckets[i] = b
 	}
 	return &s
+}
+
+// redactNetworks keeps the channel, band, width and signal of neighbouring networks but removes
+// their names and MAC addresses.
+func redactNetworks(encoded string) string {
+	var nets []map[string]any
+	if json.Unmarshal([]byte(encoded), &nets) != nil {
+		return redacted
+	}
+	for _, n := range nets {
+		for _, k := range []string{"ssid", "bssid"} {
+			if _, ok := n[k]; ok {
+				n[k] = redacted
+			}
+		}
+	}
+	b, err := json.Marshal(nets)
+	if err != nil {
+		return redacted
+	}
+	return string(b)
 }
 
 func humanDuration(d time.Duration) string {

@@ -107,6 +107,9 @@ func TestRenderReport(t *testing.T) {
 			t.Fatalf("report missing %q", want)
 		}
 	}
+	if !strings.Contains(doc, `http-equiv="Content-Security-Policy" content="default-src 'none'`) {
+		t.Fatal("report has no restrictive Content-Security-Policy")
+	}
 	external := regexp.MustCompile(`(?i)(src\s*=\s*["']?https?://|<link[^>]+href\s*=\s*["']?https?://|url\(\s*["']?https?://|@import)`)
 	if m := external.FindString(doc); m != "" {
 		t.Fatalf("report references an external resource: %q", m)
@@ -142,6 +145,9 @@ func TestRenderRedacted(t *testing.T) {
 	}
 	if !strings.Contains(doc, "private details were removed") {
 		t.Fatal("redaction note missing")
+	}
+	if !strings.Contains(doc, "Wi-Fi networks nearby") {
+		t.Fatal("redaction should keep the neighbouring networks table, only without names")
 	}
 	if s.Infos[1].Attrs["ip"] != "203.0.113.7" {
 		t.Fatal("redaction modified the original session")

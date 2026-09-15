@@ -146,13 +146,23 @@ func tcpTrace(ctx context.Context, local, dst netip.Addr, port uint16, timeout t
 		}
 		path = append(path, hop)
 		if reached {
-			break
+			return path, nil
 		}
 		if hop.IsValid() {
 			silent = 0
 		} else {
 			silent++
 		}
+	}
+	// The routers stayed silent; check with a normal TTL whether the destination itself answers,
+	// so the path shows "*,*,...,1.1.1.1" instead of looking like an outage.
+	probe := net.Dialer{Timeout: 3 * time.Second, LocalAddr: &net.TCPAddr{IP: local.AsSlice()}}
+	conn, err := probe.DialContext(ctx, "tcp4", target)
+	if err == nil {
+		_ = conn.Close()
+		path = append(path, dst)
+	} else if errors.Is(err, windows.WSAECONNREFUSED) || errors.Is(err, syscall.ECONNREFUSED) {
+		path = append(path, dst)
 	}
 	return path, nil
 }

@@ -86,7 +86,7 @@ func TestSecurityChecks(t *testing.T) {
 	if rec := do(h, "GET", "/api/mark", host, s.Token(), ""); rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("GET on POST endpoint: %d", rec.Code)
 	}
-	if rec := do(h, "GET", "/api/report-so-far?token=wrong", host, "", ""); rec.Code != http.StatusUnauthorized {
+	if rec := do(h, "GET", "/api/report-so-far?token="+s.Token(), host, "", ""); rec.Code != http.StatusUnauthorized {
 		t.Fatalf("report with wrong query token: %d", rec.Code)
 	}
 	page := do(h, "GET", "/", "localhost:45678", "", "")
@@ -116,7 +116,7 @@ func TestEndpoints(t *testing.T) {
 	if rec := do(h, "POST", "/api/contract", host, s.Token(), `{"mbps":-1}`); rec.Code != http.StatusBadRequest {
 		t.Fatalf("invalid contract: %d", rec.Code)
 	}
-	rec = do(h, "GET", "/api/report-so-far?token="+s.Token(), host, "", "")
+	rec = do(h, "GET", "/api/report-so-far", host, s.Token(), "")
 	if rec.Code != http.StatusOK || rec.Body.String() != "<html>report</html>" {
 		t.Fatalf("report so far: %d %s", rec.Code, rec.Body)
 	}

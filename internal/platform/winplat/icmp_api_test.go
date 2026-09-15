@@ -26,6 +26,10 @@ func TestEchoLoopback(t *testing.T) {
 		if err != nil || reply.Status != platform.EchoOK {
 			t.Fatalf("echo %s: status=%v err=%v", tc.addr, reply.Status, err)
 		}
+		// Verifies the reply address offset, especially the packed IPV6_ADDRESS_EX layout.
+		if reply.From != netip.MustParseAddr(tc.addr) {
+			t.Fatalf("echo %s: reply from %v", tc.addr, reply.From)
+		}
 	}
 }
 

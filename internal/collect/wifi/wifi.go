@@ -64,7 +64,12 @@ func (c *Collector) Run(ctx context.Context, sink record.Sink) error {
 		}
 		return err
 	}
+	// Per-run context: when this run ends (for example before a supervisor restart), the event
+	// subscription and its forwarding goroutine end with it, before the handle is closed.
+	runCtx, cancel := context.WithCancel(ctx)
 	defer w.Close()
+	defer cancel()
+	ctx = runCtx
 	if events, err := w.Events(ctx); err == nil {
 		go forwardEvents(ctx, events, sink)
 	}

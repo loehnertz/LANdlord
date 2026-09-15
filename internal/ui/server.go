@@ -169,7 +169,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		writeJSON(w, map[string]bool{"ok": true})
 	}))
-	mux.HandleFunc("/api/report-so-far", s.api(http.MethodGet, true, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/report-so-far", s.api(http.MethodGet, false, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := s.c.ReportSoFar(w); err != nil {
 			httpError(w, http.StatusInternalServerError, err)
@@ -223,7 +223,7 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src data:")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src data: blob:; frame-src 'self'")
 	_, _ = w.Write(pageHTML)
 }
 

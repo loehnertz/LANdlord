@@ -3,13 +3,20 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-const runningFile = "running.json"
+const (
+	runningFile = "running.json"
+	lockFile    = "instance.lock"
+)
+
+// errInstanceRunning means another LANdlord process holds the data folder.
+var errInstanceRunning = errors.New("LANdlord is already running")
 
 type runningInfo struct {
 	BaseURL string `json:"base_url"`

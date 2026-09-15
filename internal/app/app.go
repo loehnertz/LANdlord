@@ -88,8 +88,17 @@ type Recorder struct {
 	supDone        chan struct{}
 	finishOnce     sync.Once
 	finished       chan struct{}
-	reportPath     string
-	finishErr      error
+
+	// finishMu guards the finish result, which the status page reads while Finish runs.
+	finishMu   sync.Mutex
+	reportPath string
+	finishErr  error
+}
+
+func (r *Recorder) finishResult() (string, error) {
+	r.finishMu.Lock()
+	defer r.finishMu.Unlock()
+	return r.reportPath, r.finishErr
 }
 
 var _ ui.Controller = (*Recorder)(nil)
@@ -118,12 +127,25 @@ func Run(ctx context.Context, cfg config.Config, plat platform.Platform, opts Ru
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		return fmt.Errorf("create data folder: %w", err)
 	}
-	if url, ok := existingInstance(dataDir); ok {
-		if !opts.NoBrowser {
-			_ = plat.OpenURL(url)
+	release, err := acquireInstanceLock(dataDir)
+	if errors.Is(err, errInstanceRunning) {
+		// Another LANdlord is starting or running (for example after a double double-click):
+		// show its status page once it's reachable instead of recording twice.
+		for range 40 {
+			if url, ok := existingInstance(dataDir); ok {
+				if !opts.NoBrowser {
+					_ = plat.OpenURL(url)
+				}
+				return nil
+			}
+			time.Sleep(250 * time.Millisecond)
 		}
 		return nil
 	}
+	if err != nil {
+		return fmt.Errorf("lock data folder: %w", err)
+	}
+	defer release()
 	if opts.LingerAfterFinish == 0 {
 		opts.LingerAfterFinish = 10 * time.Minute
 	}
@@ -209,7 +231,7 @@ func Run(ctx context.Context, cfg config.Config, plat platform.Platform, opts Ru
 	case <-timer.C:
 		_, err = r.Finish()
 	case <-r.finished:
-		err = r.finishErr
+		_, err = r.finishResult()
 	}
 
 	select {
@@ -389,8 +411,8 @@ func (r *Recorder) Status() ui.Status {
 	}
 	_, _, hasCreds := r.routerCredentials()
 	st.RouterNeedsPassword = st.RouterIsFritzBox && !hasCreds
-	if meta.Finished && r.finishErr != nil {
-		st.Error = "Creating the report failed: " + r.finishErr.Error()
+	if _, finishErr := r.finishResult(); meta.Finished && finishErr != nil {
+		st.Error = "Creating the report failed: " + finishErr.Error()
 	}
 	r.resultMu.Lock()
 	res := r.result
@@ -434,17 +456,28 @@ func (r *Recorder) Finish() (string, error) {
 		r.finishing.Store(true)
 		defer r.finishing.Store(false)
 		defer close(r.finished)
-		r.stopCollectors()
-		<-r.supDone
-		r.writer.Emit(record.Event(record.CApp, record.NStop, time.Now(), map[string]string{"reason": "finished"}))
-		if err := r.writer.Close(); err != nil {
-			r.finishErr = fmt.Errorf("save measurements: %w", err)
+		path, err := r.finish()
+		r.finishMu.Lock()
+		r.reportPath, r.finishErr = path, err
+		r.finishMu.Unlock()
+		if err == nil && !r.opts.NoBrowser {
+			_ = r.plat.RevealFile(path)
 		}
-		finishedAt := time.Now()
-		if err := r.sess.Update(func(m *store.Meta) { m.Finished, m.FinishedAt = true, finishedAt }); err != nil {
-			r.finishErr = err
-			return
-		}
+	})
+	return r.finishResult()
+}
+
+// finish stops recording, marks the session finished and writes the report.
+func (r *Recorder) finish() (string, error) {
+	r.stopCollectors()
+	<-r.supDone
+	r.writer.Emit(record.Event(record.CApp, record.NStop, time.Now(), map[string]string{"reason": "finished"}))
+	closeErr := r.writer.Close()
+	finishedAt := time.Now()
+	if err := r.sess.Update(func(m *store.Meta) { m.Finished, m.FinishedAt = true, finishedAt }); err != nil {
+		return "", err
+	}
+	{
 		meta := r.sess.Meta()
 		reportDir := r.opts.ReportDir
 		if reportDir == "" {
@@ -457,16 +490,14 @@ func (r *Recorder) Finish() (string, error) {
 		name := meta.Start.In(meta.Location()).Format("2006-01-02_1504")
 		out := filepath.Join(reportDir, name, "report.html")
 		if err := RebuildReport(r.sess.Dir(), out, false, r.cfg.Thresholds); err != nil {
-			r.finishErr = err
-			return
+			return "", errors.Join(err, closeErr)
 		}
 		_ = r.sess.Update(func(m *store.Meta) { m.ReportPath = out })
-		r.reportPath = out
-		if !r.opts.NoBrowser {
-			_ = r.plat.RevealFile(out)
+		if closeErr != nil {
+			return out, fmt.Errorf("the last measurements may be incomplete: %w", closeErr)
 		}
-	})
-	return r.reportPath, r.finishErr
+		return out, nil
+	}
 }
 
 func (r *Recorder) SetRouterCredentials(user, pass string) {
