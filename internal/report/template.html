@@ -13,7 +13,7 @@
 <header class="masthead">
   <div>
     <p class="eyebrow">LANdlord inspection report</p>
-    <h1>{{if .HasCause}}{{.MainTitle}}{{else if .Partial}}Recording in progress{{else}}No problems measured{{end}}</h1>
+    <h1>{{if .HasCause}}{{.MainTitle}}{{else if .Partial}}Recording in progress{{else if .NoPattern}}No clear cause found{{else}}No problems measured{{end}}</h1>
     <p class="meta">{{.Period}} &middot; {{.Recorded}} recorded &middot; generated {{.Generated}}</p>
   </div>
   <div class="actions no-print">
@@ -45,8 +45,12 @@
       <div><dt>Problems found</dt><dd>{{len .Incidents}}{{if .IncidentsHidden}}+{{end}}</dd></div>
       <div><dt>Your marks during problems</dt><dd>{{.MarksMatched}} of {{len .Marks}}</dd></div>
     </dl>
+  {{else if .NoPattern}}
+    <p class="verdict-title">Problems were measured ({{.ProblemPct}} of the time), but they don't point to a clear cause.</p>
+    <p>Recording for longer, and pressing the button whenever something goes wrong, usually makes the cause clear. The details below show what was measured.</p>
   {{else}}
     <p class="verdict-title">The connection behaved well while LANdlord was recording.</p>
+    {{if .HasProblems}}<p>A few seconds with minor hiccups were measured ({{.ProblemPct}} of the time), which is normal for any connection.</p>{{end}}
     {{if .Marks}}<p>You marked {{len .Marks}} moments, but none of them lined up with a measurable problem. The trouble may come from the app or service itself, or from something LANdlord can't see.</p>{{end}}
   {{end}}
 </section>

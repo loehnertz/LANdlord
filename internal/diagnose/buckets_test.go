@@ -20,6 +20,7 @@ func TestSymptoms(t *testing.T) {
 		{"single lossy target ignored", func(b *aggregate.Bucket) { lossy(b.Paths["inet:9.9.9.9"], 40) }, nil},
 		{"stun jitter", func(b *aggregate.Bucket) { b.STUN.Jitter = 45 }, []string{"jitter"}},
 		{"stun loss", func(b *aggregate.Bucket) { b.STUN.Recv = 470; b.STUN.LossPct = 6 }, []string{"udp_loss"}},
+		{"small stun loss is normal", func(b *aggregate.Bucket) { b.STUN.Recv = 494; b.STUN.LossPct = 1.2 }, nil},
 		{"dns failure", func(b *aggregate.Bucket) { b.DNS[record.TSystem].Failed = 1 }, []string{"dns_failure"}},
 		{"single configured dns server failing is not a symptom", func(b *aggregate.Bucket) { b.DNS["configured:192.168.178.1"].Failed = 3 }, nil},
 		{"http failure", func(b *aggregate.Bucket) { b.HTTP["zoom.us"].Count, b.HTTP["zoom.us"].Failed = 2, 1 }, []string{"http_failure"}},

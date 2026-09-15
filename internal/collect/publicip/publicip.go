@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -37,7 +38,15 @@ func New(url string, every time.Duration, onIP func(string)) *Collector {
 	if onIP == nil {
 		onIP = func(string) {}
 	}
-	return &Collector{url: url, every: every, retry: time.Minute, client: &http.Client{Timeout: 10 * time.Second}, onIP: onIP}
+	// Ask over IPv4: the IPv4 address is what CGNAT detection compares with the router.
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: func(ctx context.Context, _, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, "tcp4", addr)
+		},
+	}
+	return &Collector{url: url, every: every, retry: time.Minute, client: &http.Client{Timeout: 10 * time.Second, Transport: transport}, onIP: onIP}
 }
 
 func (c *Collector) Name() string { return record.CPublic }

@@ -148,6 +148,20 @@ func TestRenderRedacted(t *testing.T) {
 	}
 }
 
+func TestShortBlipGetsNoHeadlineCulprit(t *testing.T) {
+	s, _ := simulated(t, "healthy")
+	r := diagnose.Result{AwakeBuckets: len(s.Buckets), BadBuckets: 1, ProblemPct: 0.05, Main: diagnose.Unknown, Shares: map[diagnose.Culprit]float64{diagnose.Unknown: 1}}
+	th := config.Default().Thresholds
+	doc := render(t, s, r, Options{Thresholds: &th})
+	if !strings.Contains(doc, "<h1>No problems measured</h1>") || !strings.Contains(doc, "minor hiccups") {
+		t.Fatal("a single short problem should not produce a culprit headline")
+	}
+	r.BadBuckets, r.Main = 30, diagnose.Unknown
+	if doc := render(t, s, r, Options{Thresholds: &th}); !strings.Contains(doc, "<h1>No clear cause found</h1>") {
+		t.Fatal("five minutes of unexplained problems should say there is no clear cause")
+	}
+}
+
 func TestRenderPartialAndHealthy(t *testing.T) {
 	s, r := simulated(t, "healthy")
 	doc := render(t, s, r, Options{Partial: true})

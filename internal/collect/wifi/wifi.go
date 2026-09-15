@@ -60,7 +60,7 @@ func (c *Collector) Run(ctx context.Context, sink record.Sink) error {
 	w, err := c.p.OpenWifi()
 	if err != nil {
 		if errors.Is(err, platform.ErrUnsupported) {
-			return fmt.Errorf("%w: %v", collect.ErrPermanent, err)
+			return fmt.Errorf("%w: %w", collect.ErrPermanent, err)
 		}
 		return err
 	}

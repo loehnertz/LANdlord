@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// maxWlanReportBytes keeps very large Wi-Fi reports out of the HTML report.
+const maxWlanReportBytes = 8 << 20
+
 func (*Collector) supported() error { return nil }
 
 // wlanReport asks Windows to generate its Wi-Fi report and copies it into the session.

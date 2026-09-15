@@ -111,7 +111,8 @@ func (c *sessionCtx) internet(b *aggregate.Bucket, family int) inetSummary {
 	var loss, p95, jitter []float64
 	for label, p := range b.Paths {
 		v4, v6 := record.IsInetTarget(label), record.IsInet6Target(label)
-		if !(v4 && family != 6 || v6 && family != 4) || p.Sent == 0 || !c.alive[label] {
+		wanted := (v4 && family != 6) || (v6 && family != 4)
+		if !wanted || p.Sent == 0 || !c.alive[label] {
 			continue
 		}
 		s.Targets++
@@ -142,7 +143,7 @@ func (c *sessionCtx) symptoms(b *aggregate.Bucket) []Evidence {
 	if j := max(in.Jitter, b.STUN.Jitter); j > th.JitterMs {
 		ev = append(ev, Evidence{"jitter", fmt.Sprintf("Jitter: %.0f ms", j)})
 	}
-	if c.stunOK && b.STUN.Sent > 0 && b.STUN.LossPct > th.LossPct {
+	if c.stunOK && b.STUN.Sent > 0 && b.STUN.LossPct > th.UDPLossPct {
 		ev = append(ev, Evidence{"udp_loss", fmt.Sprintf("Call-like UDP packet loss: %.1f%%", b.STUN.LossPct)})
 	}
 	// Only the Windows resolver counts as a symptom: it is what apps actually use. Failures of

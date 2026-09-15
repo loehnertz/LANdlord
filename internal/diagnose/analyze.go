@@ -12,7 +12,8 @@ func Analyze(s *aggregate.Session, th config.Thresholds) Result {
 	r := Result{Verdicts: make([]BucketVerdict, len(s.Buckets))}
 	for i := range s.Buckets {
 		b := &s.Buckets[i]
-		if b.Asleep {
+		// Buckets during LANdlord's own speed tests are not representative: the test fills the line on purpose.
+		if b.Asleep || b.SelfTest {
 			continue
 		}
 		r.AwakeBuckets++

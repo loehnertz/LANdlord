@@ -68,13 +68,15 @@ type Bucket struct {
 	DSL                           DSLStats
 	LaptopRxBps, LaptopTxBps      float64
 	PowerKnown, OnBattery, Asleep bool
-	Events                        []Event
+	// SelfTest marks buckets during LANdlord's own speed tests.
+	SelfTest bool
+	Events   []Event
 }
 
 type SpeedTest struct {
-	Time                      time.Time
-	DownMbps, UpMbps, BloatMs float64
-	Grade, Trigger            string
+	Time                                 time.Time
+	DownMbps, UpMbps, BloatMs, DurationS float64
+	Grade, Trigger                       string
 }
 
 type Session struct {
@@ -199,6 +201,7 @@ func (b *Builder) Snapshot(meta store.Meta) *Session {
 	}
 	out.carryForward()
 	out.applySleep()
+	out.applySelfTests()
 	slices.SortStableFunc(out.Events, func(x, y Event) int { return x.Time.Compare(y.Time) })
 	slices.SortStableFunc(out.Infos, func(x, y record.Record) int { return x.Time.Compare(y.Time) })
 	slices.SortStableFunc(out.SpeedTests, func(x, y SpeedTest) int { return x.Time.Compare(y.Time) })
@@ -375,7 +378,7 @@ func (s *Session) add(b *Bucket, a *accum, r record.Record) {
 		b.DSL.CRCDelta += v["crc_delta"]
 	case record.CSpeed + "/" + record.NTest:
 		s.SpeedTests = append(s.SpeedTests, SpeedTest{
-			Time: r.Time, DownMbps: v["down_mbps"], UpMbps: v["up_mbps"], BloatMs: v["bloat_ms"],
+			Time: r.Time, DownMbps: v["down_mbps"], UpMbps: v["up_mbps"], BloatMs: v["bloat_ms"], DurationS: v["duration_s"],
 			Grade: r.Attrs["grade"], Trigger: r.Attrs["trigger"],
 		})
 	case record.CMTU + "/" + record.NPMTU:
@@ -462,6 +465,26 @@ func (s *Session) carryForward() {
 			lastRouter, lastRouterIdx = b.Router, i
 		} else if lastRouterIdx >= 0 && i-lastRouterIdx <= hold {
 			b.Router = lastRouter
+		}
+	}
+}
+
+// applySelfTests marks the buckets a speed test ran in, including the one it ended in.
+func (s *Session) applySelfTests() {
+	for _, st := range s.SpeedTests {
+		if st.DurationS <= 0 {
+			continue
+		}
+		first := s.Index(st.Time)
+		last := s.Index(st.Time.Add(time.Duration(st.DurationS * float64(time.Second))))
+		if first < 0 {
+			continue
+		}
+		if last < 0 {
+			last = len(s.Buckets) - 1
+		}
+		for i := first; i <= last; i++ {
+			s.Buckets[i].SelfTest = true
 		}
 	}
 }

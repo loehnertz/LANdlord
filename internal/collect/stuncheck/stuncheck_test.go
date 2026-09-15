@@ -20,7 +20,7 @@ func responder(t *testing.T, dropEvery, portShift int) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { pc.Close() })
+	t.Cleanup(func() { _ = pc.Close() })
 	go func() {
 		buf := make([]byte, 1500)
 		count := 0

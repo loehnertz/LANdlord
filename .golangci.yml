@@ -5,3 +5,15 @@ linters:
     - errorlint
     - misspell
     - unconvert
+  settings:
+    errcheck:
+      # Closing files, connections and response bodies after use can't be handled meaningfully.
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (net.Conn).Close
+        - (*net.UDPConn).Close
+        - (net.PacketConn).Close
+        - (*golang.org/x/net/icmp.PacketConn).Close
+        - (github.com/loehnertz/LANdlord/internal/platform.Pinger).Close
+        - (github.com/loehnertz/LANdlord/internal/platform.Wifi).Close

@@ -90,7 +90,7 @@ func writeReport(path string, s *aggregate.Session, r diagnose.Result, opts repo
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }() // no-op after a successful rename
 	if err := report.Render(tmp, s, r, opts); err != nil {
 		tmp.Close()
 		return fmt.Errorf("render report: %w", err)

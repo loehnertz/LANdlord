@@ -128,7 +128,7 @@ func (c *Collector) burstOnce(ctx context.Context, server string, sink record.Si
 		select {
 		case <-ctx.Done():
 			tick.Stop()
-			conn.Close()
+			_ = conn.Close()
 			readers.Wait()
 			return
 		case <-tick.C:
@@ -139,7 +139,7 @@ func (c *Collector) burstOnce(ctx context.Context, server string, sink record.Si
 	case <-ctx.Done():
 	case <-time.After(c.wait):
 	}
-	conn.Close()
+	_ = conn.Close()
 	readers.Wait()
 	if ctx.Err() != nil || len(order) == 0 {
 		return
@@ -173,7 +173,7 @@ func (c *Collector) detectNAT(ctx context.Context, sink record.Sink) {
 	if err != nil {
 		return
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	ports := map[string]int{}
 	for _, server := range c.servers[:2] {
 		raddr := c.resolve(server)

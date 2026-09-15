@@ -35,7 +35,7 @@ func (*Platform) NewPinger(family int) (platform.Pinger, error) {
 	}
 	c, err := icmp.ListenPacket(network, addr)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unprivileged ICMP: %v", platform.ErrUnsupported, err)
+		return nil, fmt.Errorf("%w: unprivileged ICMP: %w", platform.ErrUnsupported, err)
 	}
 	return &pinger{family: family, conn: c, id: os.Getpid() & 0xffff}, nil
 }

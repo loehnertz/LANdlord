@@ -2,7 +2,6 @@ package speed
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -64,7 +63,7 @@ func TestSpeedTestWithBufferbloat(t *testing.T) {
 		t.Fatalf("tests = %d", len(tests))
 	}
 	v := tests[0].Values
-	if v["down_mbps"] <= 0 || v["up_mbps"] <= 0 || v["bloat_ms"] < 40 || tests[0].Attrs["grade"] != "C" || tests[0].Attrs["trigger"] != "interval" {
+	if v["down_mbps"] <= 0 || v["up_mbps"] <= 0 || v["duration_s"] <= 0 || v["bloat_ms"] < 40 || tests[0].Attrs["grade"] != "C" || tests[0].Attrs["trigger"] != "interval" {
 		t.Fatalf("test = %v %v", v, tests[0].Attrs)
 	}
 }
@@ -80,6 +79,6 @@ func TestSkipWhenLaptopBusy(t *testing.T) {
 		t.Fatalf("skipped = %+v", skipped)
 	}
 	if len(buf.Filter(record.CSpeed, record.NTest)) != 0 {
-		t.Fatal(fmt.Sprint("unexpected test record"))
+		t.Fatal("unexpected test record")
 	}
 }

@@ -83,6 +83,7 @@ func TestDetectTunnel(t *testing.T) {
 		{"10.0.0.2", "", false, "cgnat"},
 		{"203.0.113.7", "198.51.100.9", false, "cgnat"},
 		{"203.0.113.7", "203.0.113.7", true, ""},
+		{"203.0.113.7", "2a02:a471::1", true, ""},
 		{"", "203.0.113.7", true, ""},
 	} {
 		if kind, _ := DetectTunnel(tc.ext, tc.public, tc.v6); kind != tc.want {

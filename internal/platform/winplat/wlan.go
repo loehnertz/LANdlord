@@ -74,7 +74,7 @@ var (
 
 func (*Platform) OpenWifi() (platform.Wifi, error) {
 	if err := procWlanOpenHandle.Find(); err != nil {
-		return nil, fmt.Errorf("%w: %v", platform.ErrUnsupported, err)
+		return nil, fmt.Errorf("%w: %w", platform.ErrUnsupported, err)
 	}
 	var negotiated uint32
 	var h windows.Handle

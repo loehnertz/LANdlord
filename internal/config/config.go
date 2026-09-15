@@ -26,6 +26,7 @@ func (d *Duration) UnmarshalText(b []byte) error {
 
 type Thresholds struct {
 	LossPct         float64  `toml:"loss_pct"`
+	UDPLossPct      float64  `toml:"udp_loss_pct"`
 	JitterMs        float64  `toml:"jitter_ms"`
 	RTTP95Ms        float64  `toml:"rtt_p95_ms"`
 	MergeGap        Duration `toml:"merge_gap"`
@@ -98,7 +99,8 @@ func Default() Config {
 	c.Speedtest.MaxDownloadMB = 25
 	c.Speedtest.MaxUploadMB = 10
 	c.Thresholds = Thresholds{
-		LossPct: 1, JitterMs: 30, RTTP95Ms: 150,
+		// Public STUN servers drop a few packets even on good lines, and calls tolerate some UDP loss.
+		LossPct: 1, UDPLossPct: 3, JitterMs: 30, RTTP95Ms: 150,
 		MergeGap: Duration{30 * time.Second}, MarkWindow: Duration{2 * time.Minute},
 		GatewayFloorMs: 30, GatewayFactor: 5,
 		RSSIWeakDBm: -70, RxRatioWeak: 0.3, RetryPct: 10, OverlapAPs: 4,

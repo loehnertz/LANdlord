@@ -128,7 +128,7 @@ func (c *Collector) test(ctx context.Context, trigger string, down, up int64, si
 		}
 	}
 	sink.Emit(record.Record{Time: start, Collector: record.CSpeed, Kind: record.KindMetric, Name: record.NTest,
-		Values: map[string]float64{"down_mbps": downMbps, "up_mbps": upMbps, "bloat_ms": bloat},
+		Values: map[string]float64{"down_mbps": downMbps, "up_mbps": upMbps, "bloat_ms": bloat, "duration_s": time.Since(start).Seconds()},
 		Attrs:  map[string]string{"grade": diagnose.BloatGrade(bloat), "trigger": trigger}})
 	return true
 }

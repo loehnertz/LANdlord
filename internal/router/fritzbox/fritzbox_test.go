@@ -61,7 +61,7 @@ func fakeFritz(t *testing.T, password string, dsl bool) *httptest.Server {
 				params[strings.TrimSpace(k)] = strings.Trim(strings.TrimSpace(v), `"`)
 			}
 			var nc int
-			fmt.Sscanf(params["nc"], "%x", &nc)
+			_, _ = fmt.Sscanf(params["nc"], "%x", &nc)
 			valid = params["response"] == digestResponse(ch, params["username"], password, r.Method, params["uri"], nc, params["cnonce"])
 		}
 		mu.Unlock()

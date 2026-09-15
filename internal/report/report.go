@@ -118,7 +118,7 @@ type heatRow struct {
 type view struct {
 	Partial, Redacted                       bool
 	Version, Generated, Period, Recorded    string
-	HasProblems, HasCause                   bool
+	HasProblems, HasCause, NoPattern        bool
 	MainTitle, MainSentence, MainConfidence string
 	MainSlot                                int
 	ProblemPct                              string
@@ -176,6 +176,12 @@ func Render(w io.Writer, s *aggregate.Session, r diagnose.Result, opts Options) 
 
 func buildView(s *aggregate.Session, r diagnose.Result, opts Options) view {
 	loc := s.Meta.Location()
+	// A culprit is only named once problems add up to a minute; a few noisy seconds shouldn't get a headline.
+	minProblem := time.Minute
+	if opts.Thresholds != nil {
+		minProblem = opts.Thresholds.LikelyMinBad.Duration
+	}
+	significant := r.BadBuckets > 0 && time.Duration(r.BadBuckets)*s.Width >= minProblem
 	v := view{
 		Partial:     opts.Partial,
 		Redacted:    opts.Redact,
@@ -183,7 +189,8 @@ func buildView(s *aggregate.Session, r diagnose.Result, opts Options) view {
 		Generated:   opts.GeneratedAt.In(loc).Format("Mon 2 Jan 2006, 15:04"),
 		Recorded:    humanDuration(time.Duration(r.AwakeBuckets) * s.Width),
 		HasProblems: r.BadBuckets > 0,
-		HasCause:    r.Main != "",
+		HasCause:    significant && r.Main != "" && r.Main != diagnose.Unknown,
+		NoPattern:   significant && (r.Main == "" || r.Main == diagnose.Unknown),
 		ProblemPct:  fmt.Sprintf("%.1f%%", r.ProblemPct),
 		Live:        r.Live,
 		BloatGrade:  r.BloatGrade,

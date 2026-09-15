@@ -24,8 +24,10 @@ func TestCheck(t *testing.T) {
 	var changes []string
 	c := New(srv.URL, 0, func(ip string) { changes = append(changes, ip) })
 	var buf record.Buffer
-	if !c.check(context.Background(), &buf) || !c.check(context.Background(), &buf) {
-		t.Fatal("check failed")
+	for range 2 {
+		if !c.check(context.Background(), &buf) {
+			t.Fatal("check failed")
+		}
 	}
 	recs := buf.Filter(record.CPublic, record.NPublicIP)
 	if len(recs) != 2 || recs[0].Attrs["ip"] != "203.0.113.7" || recs[0].Attrs["loc"] != "DE" || c.IP() != "203.0.113.7" {

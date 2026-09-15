@@ -12,9 +12,6 @@ import (
 // WlanReportFile is the name of the copied Windows Wi-Fi report inside the session directory.
 const WlanReportFile = "wlanreport.html"
 
-// maxWlanReportBytes keeps very large reports out of the HTML report.
-const maxWlanReportBytes = 8 << 20
-
 type Collector struct {
 	p          platform.Platform
 	sessionDir string
@@ -27,7 +24,7 @@ func New(p platform.Platform, sessionDir string) *Collector {
 func (*Collector) Name() string { return record.CAdmin }
 
 func (c *Collector) Run(ctx context.Context, sink record.Sink) error {
-	if err := c.supported(); err != nil {
+	if err := c.supported(); err != nil { //nolint:staticcheck // constant per OS: always nil on Windows, never elsewhere
 		return err
 	}
 	if file, ok := c.wlanReport(ctx); ok {

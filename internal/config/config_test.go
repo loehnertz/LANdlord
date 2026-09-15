@@ -14,7 +14,7 @@ func TestDefaults(t *testing.T) {
 		t.Fatalf("duration = %v", c.Duration)
 	}
 	th := c.Thresholds
-	if th.LossPct != 1 || th.JitterMs != 30 || th.RTTP95Ms != 150 || th.MergeGap.Duration != 30*time.Second ||
+	if th.LossPct != 1 || th.UDPLossPct != 3 || th.JitterMs != 30 || th.RTTP95Ms != 150 || th.MergeGap.Duration != 30*time.Second ||
 		th.MarkWindow.Duration != 2*time.Minute || th.GatewayFloorMs != 30 || th.GatewayFactor != 5 ||
 		th.RSSIWeakDBm != -70 || th.RxRatioWeak != 0.3 || th.RetryPct != 10 || th.OverlapAPs != 4 ||
 		th.RouterUtil != 0.8 || th.LaptopShare != 0.2 || th.DNSSlowMs != 500 || th.RSSIStandingDBm != -67 {

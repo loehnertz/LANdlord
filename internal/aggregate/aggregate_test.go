@@ -179,6 +179,20 @@ func TestRouterSamplesHeldForSixtySeconds(t *testing.T) {
 	}
 }
 
+func TestSpeedTestBucketsAreMarked(t *testing.T) {
+	meta := store.Meta{Start: t0, Duration: time.Hour, Finished: true, FinishedAt: t0.Add(2 * time.Minute)}
+	recs := []record.Record{
+		{Time: t0.Add(25 * time.Second), Collector: record.CSpeed, Kind: record.KindMetric, Name: record.NTest,
+			Values: map[string]float64{"down_mbps": 50, "up_mbps": 10, "bloat_ms": 3, "duration_s": 30}},
+	}
+	s := build(t, meta, recs)
+	for i, want := range []bool{false, false, true, true, true, true, false} {
+		if s.Buckets[i].SelfTest != want {
+			t.Fatalf("bucket %d SelfTest = %v, want %v", i, s.Buckets[i].SelfTest, want)
+		}
+	}
+}
+
 func TestBuilderSnapshotsAreIndependent(t *testing.T) {
 	meta := store.Meta{Start: t0, Duration: time.Hour}
 	b := NewBuilder(meta, DefaultWidth)

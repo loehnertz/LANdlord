@@ -82,10 +82,10 @@ func (g *goupnpIGD) Stats(ctx context.Context) (WANStats, error) {
 	}
 	st.LinkUpBps, st.LinkDownBps = uint64(up), uint64(down)
 	if rx, err := g.common.GetTotalBytesReceivedCtx(ctx); err == nil {
-		st.RxBytes = uint64(rx)
+		st.RxBytes = rx
 	}
 	if tx, err := g.common.GetTotalBytesSentCtx(ctx); err == nil {
-		st.TxBytes = uint64(tx)
+		st.TxBytes = tx
 	}
 	if g.conn != nil {
 		if status, _, uptime, err := g.conn.GetStatusInfoCtx(ctx); err == nil {
@@ -123,10 +123,16 @@ func DetectTunnel(externalIP, publicIP string, ipv6Works bool) (kind, evidence s
 		return "dslite", "the router has no public IPv4 address, while IPv6 works"
 	case ext.IsPrivate():
 		return "cgnat", "the router's internet address is a private address"
-	case publicIP != "" && ext.String() != publicIP:
+	case publicIPv4(publicIP) && ext.String() != publicIP:
 		return "cgnat", "the router's internet address differs from the address websites see"
 	}
 	return "", ""
+}
+
+// publicIPv4 reports whether s is an IPv4 address; an IPv6 public address can't be compared with the router's IPv4 WAN address.
+func publicIPv4(s string) bool {
+	a, err := netip.ParseAddr(s)
+	return err == nil && a.Unmap().Is4()
 }
 
 type UPnPCollector struct {
