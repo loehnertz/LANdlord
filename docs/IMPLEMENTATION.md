@@ -1,6 +1,6 @@
 # LANdlord implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build LANdlord, a Windows program that records a home connection for 48 hours and writes a self-contained `report.html` naming the most likely culprit for bad calls and streams.
 
@@ -163,17 +163,17 @@ Marks are stored in the session `meta.json`, not as records.
 - Consumes: nothing
 - Produces: `version.Version string`, `version.Commit string` (set via `-ldflags -X`), `version.String() string`
 
-- [ ] **Step 1: Check the Go toolchain**
+- [x] **Step 1: Check the Go toolchain**
 
 Run: `go version`
 Expected: `go1.25` or newer.
 
-- [ ] **Step 2: Initialise the module**
+- [x] **Step 2: Initialise the module**
 
 Run: `go mod init github.com/loehnertz/LANdlord && go mod edit -go=1.25`
 Expected: `go.mod` exists with `module github.com/loehnertz/LANdlord` and `go 1.25`.
 
-- [ ] **Step 3: Write the failing test**
+- [x] **Step 3: Write the failing test**
 
 `internal/version/version_test.go`:
 
@@ -194,12 +194,12 @@ func TestString(t *testing.T) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it fails**
+- [x] **Step 4: Run test to verify it fails**
 
 Run: `go test ./internal/version/`
 Expected: FAIL, `undefined: Version`.
 
-- [ ] **Step 5: Implement**
+- [x] **Step 5: Implement**
 
 `internal/version/version.go`:
 
@@ -340,12 +340,12 @@ LANdlord records your connection on Windows for 48 hours and writes a single rep
 Status: under development. See [docs/DESIGN.md](docs/DESIGN.md).
 ```
 
-- [ ] **Step 6: Run tests and build**
+- [x] **Step 6: Run tests and build**
 
 Run: `go test ./... && go run ./cmd/landlord version`
 Expected: tests PASS, prints `landlord dev`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -373,7 +373,7 @@ git commit -m "scaffold: module, CI, version package" -m "Co-Authored-By: Claude
   - `func HopTarget(n int) string`, `func InetTarget(a netip.Addr) string`, `func IsInetTarget(t string) bool`, `func IsInet6Target(t string) bool`
   - All constants from the "Record conventions" table (`CPing`, `NEcho`, `TGateway`, ...)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `internal/record/record_test.go`:
 
@@ -438,12 +438,12 @@ func TestBufferFilter(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/record/`
 Expected: FAIL, `undefined: Metric`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `internal/record/record.go`:
 
@@ -616,12 +616,12 @@ const (
 )
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `go test ./internal/record/`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/record
@@ -650,7 +650,7 @@ git commit -m "record: record type, sinks and naming conventions" -m "Co-Authore
   - `func (w *Writer) Emit(record.Record)`, `Flush() error`, `Run(ctx context.Context, every time.Duration)`, `Close() error`
   - `func (s *Session) ReadRecords(fn func(record.Record) error) error`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `internal/store/store_test.go`:
 
@@ -788,12 +788,12 @@ func TestMetaEndAndLocation(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `go test ./internal/store/`
 Expected: FAIL, `undefined: Create`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `internal/store/session.go`:
 
@@ -1179,12 +1179,12 @@ func readFile(path string, fn func(record.Record) error) error {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `go test ./internal/store/`
 Expected: PASS. If `TestWriteFlushRead` reads 0 records before close, check that `Flush` calls `gz.Flush()` (a sync flush makes the data decodable).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/store
@@ -1207,11 +1207,11 @@ git commit -m "store: sessions, hourly gzip writer, crash-tolerant reader" -m "C
   - `func Default() Config`
   - `func Load(path string) (Config, error)`
 
-- [ ] **Step 1: Add the dependency**
+- [x] **Step 1: Add the dependency**
 
 Run: `go get github.com/pelletier/go-toml/v2@latest`
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `internal/config/config_test.go`:
 
@@ -1300,12 +1300,12 @@ func TestLoadRejectsUnknownKeys(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `go test ./internal/config/`
 Expected: FAIL, `undefined: Default`.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 `internal/config/config.go`:
 
@@ -1450,12 +1450,12 @@ func Load(path string) (Config, error) {
 }
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `go test ./internal/config/`
 Expected: PASS. `StrictMissingError.String()` includes the offending key name `durtion`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add go.mod go.sum internal/config
@@ -1488,7 +1488,7 @@ git commit -m "config: defaults and landlord.toml loading" -m "Co-Authored-By: C
   - `func Build(meta store.Meta, width time.Duration, read func(func(record.Record) error) error) (*Session, error)` (a Builder fed by `read`, then `Snapshot`)
   - `func (s *Session) Index(t time.Time) int`, `func (s *Session) LatestInfo(collector, name string) (record.Record, bool)`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `internal/aggregate/aggregate_test.go`:
 
@@ -1692,12 +1692,12 @@ func TestBuilderSnapshotsAreIndependent(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `go test ./internal/aggregate/`
 Expected: FAIL, `undefined: Build`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `internal/aggregate/stats.go`:
 
@@ -2216,12 +2216,12 @@ func (s *Session) applySleep() {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `go test ./internal/aggregate/`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/aggregate
@@ -2247,7 +2247,7 @@ The simulator produces realistic record streams for end-to-end tests and for dev
   - `func Run(sc Scenario, start time.Time, loc *time.Location, seed int64, sink record.Sink)`
   - Scenario names: `healthy`, `weak_wifi`, `access_line`, `evening_congestion`, `hop_ratelimit`, `periodic_scan`, `dns_trouble`, `ipv4_tunnel`, `lan_saturation`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `internal/sim/sim_test.go`:
 
@@ -2315,12 +2315,12 @@ func TestWeakWifiProducesDegradedGatewayBuckets(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/sim/`
 Expected: FAIL, `undefined: Names`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `internal/sim/sim.go`:
 
@@ -2622,12 +2622,12 @@ func init() {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `go test ./internal/sim/`
 Expected: PASS within a few seconds.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/sim
@@ -2673,10 +2673,10 @@ git commit -m "sim: scenario generator for end-to-end tests and report developme
 - Marks: a mark 90 s after an incident end matches with the 2 min window; a mark 3 min away gets `-1`.
 - `summarize`: problem percentage, main confidence weighting.
 
-- [ ] **Step 1:** Write `testutil_test.go`, `buckets_test.go` and `incidents_test.go`; run `go test ./internal/diagnose/` and confirm compilation failures.
-- [ ] **Step 2:** Implement `types.go`, `buckets.go`, `incidents.go`.
-- [ ] **Step 3:** Run `go test ./internal/diagnose/`; expected PASS.
-- [ ] **Step 4:** Commit `diagnose: symptoms, incidents, marks and summary`.
+- [x] **Step 1:** Write `testutil_test.go`, `buckets_test.go` and `incidents_test.go`; run `go test ./internal/diagnose/` and confirm compilation failures.
+- [x] **Step 2:** Implement `types.go`, `buckets.go`, `incidents.go`.
+- [x] **Step 3:** Run `go test ./internal/diagnose/`; expected PASS.
+- [x] **Step 4:** Commit `diagnose: symptoms, incidents, marks and summary`.
 
 ---
 
@@ -2720,10 +2720,10 @@ git commit -m "sim: scenario generator for end-to-end tests and report developme
 - unknown: STUN loss 5 % only gives `Unknown`
 - hop rate limiting: hop 2 loss 40 % only is not a bad bucket (assert `symptoms` is empty)
 
-- [ ] **Step 1:** Write `rules_test.go`; confirm it fails to compile.
-- [ ] **Step 2:** Implement `rules.go`.
-- [ ] **Step 3:** `go test ./internal/diagnose/`; expected PASS.
-- [ ] **Step 4:** Commit `diagnose: culprit rules`.
+- [x] **Step 1:** Write `rules_test.go`; confirm it fails to compile.
+- [x] **Step 2:** Implement `rules.go`.
+- [x] **Step 3:** `go test ./internal/diagnose/`; expected PASS.
+- [x] **Step 4:** Commit `diagnose: culprit rules`.
 
 ---
 
@@ -2760,10 +2760,10 @@ git commit -m "sim: scenario generator for end-to-end tests and report developme
 - `analyze_test.go`: periodic pass on 40 minutes of buckets with a gateway spike every 6th bucket; congestion pass on a 48 h session with evening access-line buckets and clean nights, and the negative case with a dirty night; findings for weak signal, bloat grade D, unavailable collector, tunnel; the DE hint appears only for DE; asleep buckets are neither awake nor bad.
 - `scenarios_test.go` (end to end through `sim.Run` into a `record.Buffer`, `aggregate.Build`, `Analyze`): `weak_wifi` gives main `wifi_signal`; `access_line` gives `access_line`; `periodic_scan` gives `client_device` with `PeriodicSpikes`; `dns_trouble` gives `dns`; `ipv4_tunnel` gives `ipv4_tunnel`; `lan_saturation` gives `lan_saturation`; `healthy` and `hop_ratelimit` have no incidents; `evening_congestion` gives `isp_congestion` and is skipped under `-short`.
 
-- [ ] **Step 1:** Write both test files; confirm failures.
-- [ ] **Step 2:** Implement the four files.
-- [ ] **Step 3:** `go test ./internal/diagnose/`; expected PASS. If a scenario's main culprit is off, fix the rule or scenario numbers based on the bucket evidence, not by loosening the assertion.
-- [ ] **Step 4:** Commit `diagnose: session passes, findings, recommendations`.
+- [x] **Step 1:** Write both test files; confirm failures.
+- [x] **Step 2:** Implement the four files.
+- [x] **Step 3:** `go test ./internal/diagnose/`; expected PASS. If a scenario's main culprit is off, fix the rule or scenario numbers based on the bucket evidence, not by loosening the assertion.
+- [x] **Step 4:** Commit `diagnose: session passes, findings, recommendations`.
 
 ---
 
@@ -2789,10 +2789,10 @@ Caveats: "Evening congestion can only be detected after recording through an eve
 
 **Tests:** each state from constructed sessions (25 minutes with problems gives collecting; 45 minutes with 2 minutes of weak-signal problems gives likely; 3 hours with two weak-signal incidents of 2 minutes each and medium confidence gives confident; 3 hours clean gives no problems); the evening caveat disappears on a 48 h session; mark and unavailable caveats text.
 
-- [ ] **Step 1:** Write `live_test.go`; confirm failure.
-- [ ] **Step 2:** Implement and wire into `Analyze`.
-- [ ] **Step 3:** `go test ./internal/diagnose/`; PASS.
-- [ ] **Step 4:** Commit `diagnose: live verdict`.
+- [x] **Step 1:** Write `live_test.go`; confirm failure.
+- [x] **Step 2:** Implement and wire into `Analyze`.
+- [x] **Step 3:** `go test ./internal/diagnose/`; PASS.
+- [x] **Step 4:** Commit `diagnose: live verdict`.
 
 ---
 
@@ -2823,10 +2823,10 @@ Caveats: "Evening congestion can only be detected after recording through an eve
 - `Redact: true` output doesn't contain the simulated SSID or `203.0.113.7`.
 - `WriteCSV` header and row count.
 
-- [ ] **Step 1:** Vendor uPlot; write `report_test.go`; confirm failure.
-- [ ] **Step 2:** Implement Go side, template, CSS, JS.
-- [ ] **Step 3:** `go test ./internal/report/`; PASS. Open a rendered file in a browser and check charts, zoom, heatmap, dark mode and a 400 px wide window.
-- [ ] **Step 4:** Commit `report: self-contained HTML report`.
+- [x] **Step 1:** Vendor uPlot; write `report_test.go`; confirm failure.
+- [x] **Step 2:** Implement Go side, template, CSS, JS.
+- [x] **Step 3:** `go test ./internal/report/`; PASS. Open a rendered file in a browser and check charts, zoom, heatmap, dark mode and a 400 px wide window.
+- [x] **Step 4:** Commit `report: self-contained HTML report`.
 
 ---
 
@@ -2846,7 +2846,7 @@ Caveats: "Evening congestion can only be detected after recording through an eve
 
 **Tests:** `Simulate("access_line", tmp, 1, t0)` writes a report containing "Access line"; `RebuildReport` on that session with `redact=true` succeeds.
 
-- [ ] Steps: test, implement, `go test ./... && go run ./cmd/landlord simulate -scenario weak_wifi -out testdata/out`, open the report, commit `cmd: simulate and report subcommands`.
+- [x] Steps: test, implement, `go test ./... && go run ./cmd/landlord simulate -scenario weak_wifi -out testdata/out`, open the report, commit `cmd: simulate and report subcommands`.
 
 ---
 
@@ -2911,7 +2911,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** channel and band conversions for 2412, 2437, 2484, 5180, 5745, 5955; overlap on 2.4 GHz channels 1/4 (yes) and 1/6 (no), 5 GHz 80 MHz on 36 overlaps 20 MHz on 48; `WidthFromIEs` for crafted HT-40, VHT-80, VHT-160 and plain IEs.
 
-- [ ] Steps: tests, implement, `go test ./internal/platform/ && GOOS=windows go build ./...`, commit `platform: interfaces, fake and Wi-Fi helpers`.
+- [x] Steps: tests, implement, `go test ./internal/platform/ && GOOS=windows go build ./...`, commit `platform: interfaces, fake and Wi-Fi helpers`.
 
 ---
 
@@ -2942,7 +2942,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** collector with `platform.Fake` whose `EchoFunc` returns timeouts for one target: emitted records per target, `lost` vs `rtt_ms`, target labels `gateway`, `hop1`, `inet:1.1.1.1`, `inet6:...`; stops on context cancel. Unix pinger test pings `127.0.0.1` and skips when `ListenPacket` fails. Windows API test pings `127.0.0.1`, `::1`, and `8.8.8.8` with TTL 1 (expects `EchoTTLExpired` or timeout).
 
-- [ ] Steps: tests, implement, `go test ./... && GOOS=windows go vet ./...`, commit `ping: ICMP on Windows and unix, route discovery, ping collector`.
+- [x] Steps: tests, implement, `go test ./... && GOOS=windows go vet ./...`, commit `ping: ICMP on Windows and unix, route discovery, ping collector`.
 
 ---
 
@@ -2962,7 +2962,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** permanent error emits exactly one unavailable record; a panicking collector restarts (use a short injectable base backoff); cancel stops everything; `States()` reflects statuses.
 
-- [ ] Steps: tests, implement, commit `collect: supervisor with backoff and unavailable handling`.
+- [x] Steps: tests, implement, commit `collect: supervisor with backoff and unavailable handling`.
 
 ---
 
@@ -2978,7 +2978,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** fake platform answering TTL n with a scripted address: path, hop set skips gateway and private hops, route change detection ignores `*`.
 
-- [ ] Steps: tests, implement, commit `traceroute: ICMP traceroute and hop discovery`.
+- [x] Steps: tests, implement, commit `traceroute: ICMP traceroute and hop discovery`.
 
 ---
 
@@ -3009,7 +3009,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests (fake Wi-Fi):** link records and retry percentage from two counter samples; scan overlap counting and JSON; location denied emits one unavailable record and recovers; event mapping.
 
-- [ ] Steps: tests, implement, `GOOS=windows go vet ./...`, run the `windowsapi` test on a Windows machine with Wi-Fi when available (otherwise note it for Task 30), commit `wifi: wlanapi bindings and Wi-Fi collector`.
+- [x] Steps: tests, implement, `GOOS=windows go vet ./...`, run the `windowsapi` test on a Windows machine with Wi-Fi when available (otherwise note it for Task 30), commit `wifi: wlanapi bindings and Wi-Fi collector`.
 
 ---
 
@@ -3026,7 +3026,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** rates from fake counters; sleep gap detection with an injected clock; `LaptopMbps` averaging.
 
-- [ ] Steps: tests, implement, commit `system: interface counters, power, sleep detection, keep-awake`.
+- [x] Steps: tests, implement, commit `system: interface counters, power, sleep detection, keep-awake`.
 
 ---
 
@@ -3038,7 +3038,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** a local `dns.Server` on `127.0.0.1:0` answering one name and returning SERVFAIL for another; the collector pointed at it via an injectable resolver list.
 
-- [ ] Steps: tests, implement, commit `dnscheck: resolver timing and failures`.
+- [x] Steps: tests, implement, commit `dnscheck: resolver timing and failures`.
 
 ---
 
@@ -3050,7 +3050,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** success timings are positive; a closed port gives `failed`.
 
-- [ ] Steps: tests, implement, commit `httpcheck: connect, TLS and first-byte timing`.
+- [x] Steps: tests, implement, commit `httpcheck: connect, TLS and first-byte timing`.
 
 ---
 
@@ -3062,7 +3062,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** a local STUN responder (UDP server decoding with `stun.Message.Decode` and replying with `stun.XORMappedAddress`) dropping every 10th request: `loss_pct` about 10, jitter computed; NAT detection with two local responders reporting the same or different ports.
 
-- [ ] Steps: tests, implement, commit `stuncheck: call-like UDP loss and jitter`.
+- [x] Steps: tests, implement, commit `stuncheck: call-like UDP loss and jitter`.
 
 ---
 
@@ -3082,7 +3082,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** `httptest` servers serving and accepting bytes; skip path; bloat computation with a fake pinger returning higher RTTs during transfer.
 
-- [ ] Steps: tests, implement, commit `speed: capped speed test with bufferbloat grade; public IP`.
+- [x] Steps: tests, implement, commit `speed: capped speed test with bufferbloat grade; public IP`.
 
 ---
 
@@ -3094,7 +3094,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** fake pinger that accepts up to payload 1452 gives MTU 1480.
 
-- [ ] Steps: tests, implement, commit `mtu: path MTU discovery`.
+- [x] Steps: tests, implement, commit `mtu: path MTU discovery`.
 
 ---
 
@@ -3110,7 +3110,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** `httptest` servers serving a FRITZ!Box `tr64desc.xml` fixture and an HTML title; counter wrap and reconnect logic on a fake IGD interface; tunnel detection table.
 
-- [ ] Steps: tests, implement, commit `router: detection, UPnP WAN stats, tunnel detection`.
+- [x] Steps: tests, implement, commit `router: detection, UPnP WAN stats, tunnel detection`.
 
 ---
 
@@ -3125,7 +3125,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** digest response against a known vector; SOAP parsing against fixtures; `httptest` server requiring digest auth and returning fixtures; CRC delta and resync detection.
 
-- [ ] Steps: tests, implement, commit `fritzbox: TR-064 DSL statistics and device log`.
+- [x] Steps: tests, implement, commit `fritzbox: TR-064 DSL statistics and device log`.
 
 ---
 
@@ -3144,7 +3144,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** event log XML parsing fixture; TCP traceroute quoted-port parsing on a crafted packet; helper argument parsing.
 
-- [ ] Steps: tests, implement, `GOOS=windows go vet ./...`, commit `admin: event log history, wlanreport, driver properties, TCP traceroute, helper`.
+- [x] Steps: tests, implement, `GOOS=windows go vet ./...`, commit `admin: event log history, wlanreport, driver properties, TCP traceroute, helper`.
 
 ---
 
@@ -3163,7 +3163,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** wrong Host gives 403; missing or wrong token gives 401; GET on a POST endpoint gives 405; mark and finish call the controller; status JSON includes the live verdict.
 
-- [ ] Steps: tests, implement, check the page in a browser against a fake controller (`go test -run TestManualPage -manual` helper that serves until interrupted, skipped by default), commit `ui: local status page with live verdict`.
+- [x] Steps: tests, implement, check the page in a browser against a fake controller (`go test -run TestManualPage -manual` helper that serves until interrupted, skipped by default), commit `ui: local status page with live verdict`.
 
 ---
 
@@ -3187,7 +3187,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 
 **Tests:** `instance_test.go` (stale `running.json` ignored when health check fails); `app_test.go` runs `app.Run` with `platform.Fake`, a 30 s duration, `NoBrowser`, fake collectors injected through an option, calls `Mark` and waits for finish: a report file exists, meta is finished, marks are stored, and the live verdict was computed at least once.
 
-- [ ] Steps: tests, implement, `go test ./... && make windows`, commit `app: session lifecycle, live verdict, tray, single instance`.
+- [x] Steps: tests, implement, `go test ./... && make windows`, commit `app: session lifecycle, live verdict, tray, single instance`.
 
 ---
 
@@ -3204,7 +3204,7 @@ func Current() Platform // current_windows.go returns winplat.New(); current_oth
 - `CONTRIBUTING.md`: layout, tests, the record conventions contract, how to add a scenario, a router plugin, or a country hint.
 - `docs/USER-GUIDE.md`: a one-page guide for the person running it, with the SmartScreen and location access steps.
 
-- [ ] Steps: implement, `make windows`, `goreleaser release --snapshot --clean` locally (see https://goreleaser.com/install/), commit `release: icon, resources, GoReleaser, docs`.
+- [x] Steps: implement, `make windows`, `goreleaser release --snapshot --clean` locally (see https://goreleaser.com/install/), commit `release: icon, resources, GoReleaser, docs`.
 
 ---
 
