@@ -44,21 +44,26 @@ func TestTraceAndProviderHops(t *testing.T) {
 		t.Fatalf("provider hops = %v", hops)
 	}
 
-	unreached := Trace(context.Background(), &silentAfter{}, dst, 10, time.Millisecond)
+	quiet := &silentAfter{}
+	unreached := Trace(context.Background(), quiet, dst, 30, time.Millisecond)
 	if got := FormatPath(unreached); got != "192.168.178.1,*" {
 		t.Fatalf("unfinished trace = %s", got)
 	}
+	if want := 1 + maxSilentHops*attemptsPerHop; quiet.calls != want {
+		t.Fatalf("silent network took %d echoes, want %d (early stop)", quiet.calls, want)
+	}
 }
 
-type silentAfter struct{}
+type silentAfter struct{ calls int }
 
-func (silentAfter) Echo(_ context.Context, req platform.EchoRequest) (platform.EchoReply, error) {
+func (s *silentAfter) Echo(_ context.Context, req platform.EchoRequest) (platform.EchoReply, error) {
+	s.calls++
 	if req.TTL == 1 {
 		return platform.EchoReply{From: netip.MustParseAddr("192.168.178.1"), Status: platform.EchoTTLExpired}, nil
 	}
 	return platform.EchoReply{Status: platform.EchoTimeout}, nil
 }
-func (silentAfter) Close() error { return nil }
+func (*silentAfter) Close() error { return nil }
 
 func TestRouteChangeIgnoresSilentHops(t *testing.T) {
 	if comparable("a,*,b") != comparable("a,b,*") {

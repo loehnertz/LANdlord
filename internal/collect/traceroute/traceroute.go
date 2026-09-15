@@ -21,6 +21,9 @@ import (
 const (
 	defaultMaxHops = 30
 	attemptsPerHop = 3
+	// maxSilentHops ends a trace early when networks drop TTL-expired replies, so a trace
+	// can't block for 30 hops x 3 attempts.
+	maxSilentHops = 5
 )
 
 var cgnat = netip.MustParsePrefix("100.64.0.0/10")
@@ -28,7 +31,8 @@ var cgnat = netip.MustParsePrefix("100.64.0.0/10")
 // Trace returns one entry per TTL; an invalid address means no hop answered.
 func Trace(ctx context.Context, pg platform.Pinger, dst netip.Addr, maxHops int, timeout time.Duration) []netip.Addr {
 	var path []netip.Addr
-	for ttl := 1; ttl <= maxHops; ttl++ {
+	silent := 0
+	for ttl := 1; ttl <= maxHops && silent < maxSilentHops; ttl++ {
 		var hop netip.Addr
 		reached := false
 		for range attemptsPerHop {
@@ -54,6 +58,11 @@ func Trace(ctx context.Context, pg platform.Pinger, dst netip.Addr, maxHops int,
 		path = append(path, hop)
 		if reached {
 			break
+		}
+		if hop.IsValid() {
+			silent = 0
+		} else {
+			silent++
 		}
 	}
 	return trimTrailingSilence(path)
