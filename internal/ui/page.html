@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LANdlord</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --text: #0b0b0b; --text-2: #52514e; --muted: #898781;
+  --border: rgba(11,11,11,.1); --line: #e1e0d9; --accent: #2a78d6; --alarm: #d03b3b; --alarm-ink: #fff;
+  --good: #006300; --warn-bg: #fff4d6; --warn-border: #eda100;
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; --page: #0d0d0d; --surface: #1a1a19; --text: #fff; --text-2: #c3c2b7;
+    --border: rgba(255,255,255,.1); --line: #2c2c2a; --accent: #3987e5; --good: #0ca30c; --warn-bg: #2b2210; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.6rem; margin: 0 0 4px; }
+h2 { font-size: 1.05rem; margin: 0 0 8px; }
+p { margin: 0 0 8px; }
+.sub { color: var(--text-2); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-top: 16px; }
+.bad { display: block; width: 100%; margin-top: 20px; padding: 26px 16px; font: 700 1.5rem/1.2 inherit; font-family: inherit;
+  color: var(--alarm-ink); background: var(--alarm); border: 0; border-radius: 18px; cursor: pointer; box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+.bad:active { transform: translateY(1px); }
+.bad:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; justify-content: center; }
+.tag { font: inherit; font-size: .95rem; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+.tag[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.toast { margin-top: 10px; text-align: center; color: var(--good); font-weight: 600; min-height: 1.5em; }
+.verdict-state { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+.share { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.share span { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; }
+ul { margin: 6px 0 0; padding-left: 1.2em; color: var(--text-2); }
+.banner { background: var(--warn-bg); border: 1px solid var(--warn-border); }
+button.secondary, .link-button { font: inherit; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; text-decoration: none; display: inline-block; }
+button.finish { width: 100%; margin-top: 8px; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-weight: 600; }
+form { display: grid; gap: 8px; margin-top: 10px; }
+label { font-size: .9rem; color: var(--text-2); display: grid; gap: 4px; }
+input { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--page); color: var(--text); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.done { border-color: var(--good); }
+code { overflow-wrap: anywhere; }
+.measure { font-size: .9rem; color: var(--text-2); }
+.measure li { margin-bottom: 2px; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title">LANdlord is recording</h1>
+    <p class="sub" id="subtitle">Keep using this laptop as usual. Leave this window open or come back to it through the house icon near the clock.</p>
+  </header>
+
+  <section id="error" class="card banner" hidden role="alert"></section>
+
+  <section id="location" class="card banner" hidden>
+    <h2>Windows is hiding the Wi-Fi details</h2>
+    <p>To measure the Wi-Fi signal, Windows needs "Let desktop apps access your location" to be turned on. LANdlord doesn't use your location.</p>
+    <button type="button" class="secondary" id="open-location">Open location settings</button>
+  </section>
+
+  <div id="recording">
+    <button type="button" class="bad" id="mark">It's bad right now!</button>
+    <div class="tags" role="group" aria-label="What were you doing? (optional)">
+      <button type="button" class="tag" data-tag="call" aria-pressed="false">Video call</button>
+      <button type="button" class="tag" data-tag="streaming" aria-pressed="false">Streaming</button>
+      <button type="button" class="tag" data-tag="browsing" aria-pressed="false">Browsing</button>
+      <button type="button" class="tag" data-tag="gaming" aria-pressed="false">Gaming</button>
+    </div>
+    <p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+    <section class="card">
+      <p class="verdict-state" id="state">Status</p>
+      <h2 id="headline">Starting…</h2>
+      <div class="share" id="share" hidden><span id="share-bar"></span></div>
+      <ul id="caveats"></ul>
+      <p class="sub" id="progress"></p>
+      <div class="row">
+        <a class="link-button" id="so-far" href="#" target="_blank" rel="noopener">See the report so far</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <p id="remaining" class="sub"></p>
+      <button type="button" class="secondary finish" id="finish">Finish now and create the report</button>
+    </section>
+
+    <details id="router-box" hidden>
+      <summary>FRITZ!Box password (optional)</summary>
+      <p class="sub">With the password LANdlord can read the line's error counters from the router. It's only kept in memory and never saved.</p>
+      <form id="router-form">
+        <label>User name (leave empty if you only have a password)<input name="user" autocomplete="username"></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit" class="secondary">Use password</button>
+        <p class="sub" id="router-result" role="status"></p>
+      </form>
+    </details>
+
+    <details>
+      <summary>Contracted download speed (optional)</summary>
+      <p class="sub">If you know the speed in your internet contract, the report can compare it with what was measured.</p>
+      <form id="contract-form">
+        <label>Download speed in Mbit/s<input name="mbps" type="number" min="1" max="10000" step="1" inputmode="numeric"></label>
+        <button type="submit" class="secondary">Save</button>
+        <p class="sub" id="contract-result" role="status"></p>
+      </form>
+    </details>
+
+    <details>
+      <summary>What is being measured</summary>
+      <ul class="measure" id="collectors"></ul>
+    </details>
+  </div>
+
+  <section class="card done" id="finished" hidden>
+    <h2>The report is ready</h2>
+    <p>It was saved here:</p>
+    <p><code id="report-path"></code></p>
+    <p class="sub">A folder window with the file selected should have opened. Send that file to whoever helps you with the internet, for example by email or messenger. You can close this window now.</p>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  var token = location.hash.slice(1);
+  try {
+    if (token) { sessionStorage.setItem("landlord-token", token); history.replaceState(null, "", "/"); }
+    else { token = sessionStorage.getItem("landlord-token") || ""; }
+  } catch (e) {}
+
+  var $ = function (id) { return document.getElementById(id); };
+  var selectedTag = "";
+  var toastTimer;
+
+  function api(method, path, body) {
+    var opts = { method: method, headers: { "X-Landlord-Token": token } };
+    if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+    return fetch(path, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+        return data;
+      });
+    });
+  }
+
+  function showError(msg) {
+    var el = $("error");
+    el.textContent = msg;
+    el.hidden = !msg;
+  }
+
+  function toast(msg) {
+    $("toast").textContent = msg;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { $("toast").textContent = ""; }, 4000);
+  }
+
+  function duration(seconds) {
+    if (seconds <= 0) return "0 minutes";
+    var h = Math.floor(seconds / 3600), m = Math.round((seconds % 3600) / 60);
+    if (m === 60) { h++; m = 0; }
+    if (h === 0) return m + (m === 1 ? " minute" : " minutes");
+    return h + (h === 1 ? " hour" : " hours") + (m ? " " + m + " min" : "");
+  }
+
+  var stateNames = { collecting: "Still collecting", no_problems: "So far so good", likely: "Likely cause so far", confident: "Most likely cause" };
+  var collectorNames = {
+    ping: "Ping to the router, the provider and the internet", trace: "Route to the internet", wifi: "Wi-Fi signal, speed and neighbouring networks",
+    system: "Network adapter traffic, power and sleep", dns: "Name lookups (DNS)", http: "Connections to Zoom, Teams, YouTube and others",
+    stun: "Call-like test traffic", speed: "Hourly speed test", "public": "Public IP address", mtu: "Packet size test",
+    router: "Router identification", upnp: "Router traffic statistics", fritz: "FRITZ!Box line statistics",
+    eventlog: "Windows Wi-Fi history (admin)", admin: "Windows Wi-Fi report (admin)"
+  };
+  var statusNames = { running: "running", backoff: "retrying", unavailable: "not available", stopped: "stopped" };
+
+  function render(s) {
+    showError(s.error || "");
+    if (!s.recording && s.report_path) {
+      $("recording").hidden = true;
+      $("location").hidden = true;
+      $("finished").hidden = false;
+      $("report-path").textContent = s.report_path;
+      $("title").textContent = "Recording finished";
+      $("subtitle").textContent = "";
+      return;
+    }
+    $("location").hidden = !s.location_denied;
+    $("state").textContent = stateNames[s.live.state] || "Status";
+    $("headline").textContent = s.live.headline || "Starting…";
+    var showShare = s.live.state === "likely" || s.live.state === "confident";
+    $("share").hidden = !showShare;
+    $("share-bar").style.width = Math.max(2, Math.min(100, s.live.share_pct || 0)) + "%";
+    var caveats = $("caveats");
+    caveats.textContent = "";
+    (s.live.caveats || []).forEach(function (c) { var li = document.createElement("li"); li.textContent = c; caveats.appendChild(li); });
+    $("progress").textContent = "Recorded " + duration((s.live.awake_minutes || 0) * 60) + ", problems measured for " + duration((s.live.problem_minutes || 0) * 60) + ". You marked " + s.marks + (s.marks === 1 ? " moment." : " moments.");
+    $("remaining").textContent = s.finishing ? "Creating the report…" : "Recording stops by itself in " + duration(s.remaining_seconds) + ".";
+    $("finish").disabled = !!s.finishing;
+    $("so-far").href = "/api/report-so-far?token=" + encodeURIComponent(token);
+    $("router-box").hidden = !s.router_is_fritzbox;
+    if (s.router_is_fritzbox && !s.router_needs_password) $("router-result").textContent = "Line statistics are being read.";
+    var list = $("collectors");
+    list.textContent = "";
+    (s.collectors || []).forEach(function (c) {
+      var li = document.createElement("li");
+      li.textContent = (collectorNames[c.name] || c.name) + ": " + (statusNames[c.status] || c.status) + (c.status === "unavailable" && c.last_error ? " (" + c.last_error + ")" : "");
+      list.appendChild(li);
+    });
+  }
+
+  function refresh() {
+    api("GET", "/api/status").then(render).catch(function (e) {
+      showError("LANdlord isn't responding (" + e.message + "). If you closed it, start it again; the recording continues where it left off.");
+    });
+  }
+
+  document.querySelectorAll(".tag").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var on = btn.getAttribute("aria-pressed") !== "true";
+      document.querySelectorAll(".tag").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+      btn.setAttribute("aria-pressed", String(on));
+      selectedTag = on ? btn.getAttribute("data-tag") : "";
+    });
+  });
+
+  $("mark").addEventListener("click", function () {
+    var btn = $("mark");
+    btn.disabled = true;
+    api("POST", "/api/mark", { tag: selectedTag }).then(function () {
+      toast("Marked. Thanks! Press again whenever it happens.");
+      document.querySelectorAll(".tag").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+      selectedTag = "";
+      refresh();
+    }).catch(function (e) { showError("Couldn't save the mark: " + e.message); })
+      .finally(function () { setTimeout(function () { btn.disabled = false; }, 1500); });
+  });
+
+  $("finish").addEventListener("click", function () {
+    if (!confirm("Stop recording and create the report now?")) return;
+    $("finish").disabled = true;
+    $("remaining").textContent = "Creating the report… this can take a minute.";
+    api("POST", "/api/finish").then(refresh).catch(function (e) {
+      showError("Creating the report failed: " + e.message);
+      $("finish").disabled = false;
+    });
+  });
+
+  $("open-location").addEventListener("click", function () { api("POST", "/api/location-settings").catch(function (e) { showError(e.message); }); });
+
+  $("router-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var f = ev.target;
+    api("POST", "/api/router", { user: f.user.value, password: f.password.value }).then(function () {
+      f.password.value = "";
+      $("router-result").textContent = "Saved. LANdlord will try it within a minute.";
+    }).catch(function (e) { $("router-result").textContent = e.message; });
+  });
+
+  $("contract-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    api("POST", "/api/contract", { mbps: Number(ev.target.mbps.value) }).then(function () {
+      $("contract-result").textContent = "Saved.";
+    }).catch(function (e) { $("contract-result").textContent = e.message; });
+  });
+
+  refresh();
+  setInterval(refresh, 5000);
+})();
+</script>
+</body>
+</html>
